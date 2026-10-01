@@ -1,111 +1,92 @@
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel
+import logging
+from contextlib import asynccontextmanager
+from hmac import compare_digest
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
+from pydantic import BaseModel, ConfigDict, StrictBool
 from supabase import create_client
 
-from app.config import (
-    SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY,
-    DEVICE_API_KEY,
-)
+from app.config import Settings
 
-app = FastAPI()
-
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY,
-)
+logger = logging.getLogger(__name__)
+SLOT_COLUMNS = "id,code,sensor_occupied,last_seen_at,reserved_until,map_x,map_y"
 
 
 class SensorUpdate(BaseModel):
-    occupied: bool
+    model_config = ConfigDict(extra="forbid")
+    occupied: StrictBool
 
 
-@app.post("/api/v1/parking-slots/{slot_code}/sensor")
-def update_sensor(
-    slot_code: str,
-    data: SensorUpdate,
-    x_device_key: str = Header(),
+def require_device_key(
+    request: Request, x_device_key: str | None = Header(default=None)
 ):
-    if x_device_key != DEVICE_API_KEY:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid device key",
+    expected = request.app.state.settings.device_api_key
+    if not x_device_key or not compare_digest(
+        x_device_key.encode("utf-8"), expected.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Invalid device key")
+
+
+def create_app(settings: Settings | None = None, database=None):
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        resolved = settings or Settings.from_env()
+        if not resolved.device_api_key:
+            raise RuntimeError("DEVICE_API_KEY không được để trống")
+        application.state.settings = resolved
+        application.state.database = database if database is not None else create_client(
+            resolved.supabase_url, resolved.supabase_secret_key
         )
+        yield
 
-    try:
-        result = (
-            supabase
-            .table("parking_slots")
-            .update({
-                "sensor_occupied": data.occupied
-            })
-            .eq("code", slot_code)
-            .select(
-                "id, code, sensor_occupied"
-            )
-            .execute()
-        )
+    application = FastAPI(title="Smart Parking IoT", lifespan=lifespan)
 
-        print("SUPABASE RESULT:")
-        print(result.data)
+    @application.get("/health")
+    def health():
+        # Liveness only; does not query Supabase.
+        return {"status": "ok"}
 
-        if not result.data:
+    @application.post(
+        "/api/v1/parking-slots/{slot_code}/sensor",
+        dependencies=[Depends(require_device_key)],
+    )
+    def update_sensor(
+        request: Request,
+        data: SensorUpdate,
+        slot_code: str = Path(pattern=r"^[A-Z][A-Z0-9_-]{0,15}$"),
+    ):
+        try:
+            # One DB transaction updates state, heartbeat and observation history.
+            result = request.app.state.database.rpc(
+                "ingest_sensor",
+                {"p_code": slot_code, "p_occupied": data.occupied},
+            ).execute()
+        except Exception:
+            logger.exception("Cannot update parking sensor")
             raise HTTPException(
-                status_code=404,
-                detail=f"Không tìm thấy slot {slot_code}",
+                status_code=503, detail="Không thể cập nhật dữ liệu cảm biến"
+            ) from None
+        if not result.data:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy slot {slot_code}")
+        return {"success": True, "data": result.data[0]}
+
+    @application.get(
+        "/api/v1/parking-slots", dependencies=[Depends(require_device_key)]
+    )
+    def get_all_parking_slots(request: Request):
+        try:
+            result = (
+                request.app.state.database.table("parking_slots")
+                .select(SLOT_COLUMNS).order("code").execute()
             )
+        except Exception:
+            logger.exception("Cannot read parking slots")
+            raise HTTPException(
+                status_code=503, detail="Không thể đọc danh sách chỗ đỗ"
+            ) from None
+        return {"success": True, "data": result.data}
 
-        return {
-            "success": True,
-            "data": result.data[0],
-        }
+    return application
 
-    except HTTPException:
-        raise
 
-    except Exception as e:
-        print("SUPABASE ERROR:")
-        print(repr(e))
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
-
-@app.get("/api/v1/parking-slots")
-def get_all_parking_slots(x_device_key: str = Header()):
-    if x_device_key != DEVICE_API_KEY:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid device key",
-        )
-
-    try:
-        result = (
-            supabase
-            .table("parking_slots")
-            .select(
-                "id, code, sensor_occupied"
-            )
-            .execute()
-        )
-
-        print("SUPABASE RESULT:")
-        print(result.data)
-
-        return {
-            "success": True,
-            "data": result.data,
-        }
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        print("SUPABASE ERROR:")
-        print(repr(e))
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
+app = create_app()

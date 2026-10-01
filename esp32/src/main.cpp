@@ -2,144 +2,113 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-#define IR_PIN 27
-#define LED_PIN 25
+#if __has_include("parking_config.h")
+#include "parking_config.h"
+#else
+#include "parking_config.example.h"
+#endif
 
-const char* WIFI_SSID = "AnNhien";
-const char* WIFI_PASSWORD = "hoilamgi";
+constexpr size_t SLOT_COUNT = sizeof(SLOTS) / sizeof(SLOTS[0]);
+struct SlotState {
+    int candidate;
+    uint32_t candidateSince;
+    bool ready = false;
+    bool occupied = false;
+    bool dirty = true;
+    bool attempted = false;
+    bool sent = false;
+    uint32_t lastAttempt = 0;
+    uint32_t lastSuccess = 0;
+};
+SlotState states[SLOT_COUNT];
+uint32_t lastWifiAttempt = 0;
+size_t nextSlot = 0;
 
-// Nếu FastAPI đang chạy trên laptop:
-// đổi thành IPv4 của laptop, KHÔNG dùng localhost
-const char* SERVER_URL =
-    "http://192.168.2.236:8000/api/v1/parking-slots/A01/sensor";
-
-// Phải giống DEVICE_API_KEY trong .env backend
-const char* DEVICE_API_KEY =
-    "esp32-secret-123";
-
-int previousState = HIGH;
-
-void connectWiFi() {
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-    Serial.print("Connecting WiFi");
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-
-    Serial.println();
-    Serial.println("WiFi connected");
-
-    Serial.print("ESP32 IP: ");
-    Serial.println(WiFi.localIP());
-}
-
-bool sendStatus(bool occupied) {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi disconnected");
-        return false;
-    }
-
+bool sendStatus(size_t index) {
     HTTPClient http;
-
-    http.begin(SERVER_URL);
-
-    http.addHeader(
-        "Content-Type",
-        "application/json"
-    );
-
-    http.addHeader(
-        "X-Device-Key",
-        DEVICE_API_KEY
-    );
-
-    String body = occupied
-        ? "{\"occupied\":true}"
-        : "{\"occupied\":false}";
-
-    Serial.print("POST: ");
-    Serial.println(body);
-
-    int httpCode = http.POST(body);
-
-    Serial.print("HTTP code: ");
-    Serial.println(httpCode);
-
-    if (httpCode > 0) {
-        Serial.print("Response: ");
-        Serial.println(http.getString());
-    }
-
+    const String url = String(API_BASE_URL) + "/api/v1/parking-slots/" + SLOTS[index].code + "/sensor";
+    // LAN demo uses HTTP. Production requires verified HTTPS.
+    if (!http.begin(url)) return false;
+    http.setConnectTimeout(1000);
+    http.setTimeout(1000);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-Device-Key", DEVICE_API_KEY);
+    const int code = http.POST(states[index].occupied
+        ? "{\"occupied\":true}" : "{\"occupied\":false}");
+    Serial.printf("%s: %s, HTTP %d\n", SLOTS[index].code,
+        states[index].occupied ? "OCCUPIED" : "FREE", code);
     http.end();
-
-    return httpCode >= 200 && httpCode < 300;
+    return code >= 200 && code < 300;
 }
 
 void setup() {
     Serial.begin(115200);
-
-    pinMode(IR_PIN, INPUT);
     pinMode(LED_PIN, OUTPUT);
-
     digitalWrite(LED_PIN, LOW);
-
-    connectWiFi();
-
-    // Đọc trạng thái hiện tại khi ESP32 vừa bật
-    previousState = digitalRead(IR_PIN);
-
-    bool occupied = previousState == LOW;
-
-    digitalWrite(
-        LED_PIN,
-        occupied ? HIGH : LOW
-    );
-
-    // Gửi trạng thái ban đầu
-    sendStatus(occupied);
+    for (size_t i = 0; i < SLOT_COUNT; ++i) {
+        pinMode(SLOTS[i].pin, INPUT_PULLUP);
+        states[i].candidate = digitalRead(SLOTS[i].pin);
+        states[i].candidateSince = millis();
+    }
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    lastWifiAttempt = millis();
+    Serial.println("WiFi connecting; sensor sampling continues.");
 }
 
 void loop() {
-    // Nếu mất WiFi thì kết nối lại
-    if (WiFi.status() != WL_CONNECTED) {
-        connectWiFi();
-    }
-
-    int currentState = digitalRead(IR_PIN);
-
-    // Chỉ xử lý khi cảm biến thay đổi
-    if (currentState != previousState) {
-
-        // debounce/chống nhiễu
-        delay(200);
-
-        currentState = digitalRead(IR_PIN);
-
-        if (currentState != previousState) {
-
-            bool occupied =
-                currentState == LOW;
-
-            digitalWrite(
-                LED_PIN,
-                occupied ? HIGH : LOW
-            );
-
-            if (occupied) {
-                Serial.println("A01: OCCUPIED");
-            } else {
-                Serial.println("A01: AVAILABLE");
-            }
-
-            // Chỉ cập nhật state cũ nếu gửi backend thành công
-            if (sendStatus(occupied)) {
-                previousState = currentState;
+    const uint32_t now = millis();
+    bool anyOccupied = false;
+    for (size_t i = 0; i < SLOT_COUNT; ++i) {
+        auto& state = states[i];
+        const int raw = digitalRead(SLOTS[i].pin);
+        if (raw != state.candidate) {
+            state.candidate = raw;
+            state.candidateSince = now;
+        }
+        if (now - state.candidateSince >= DEBOUNCE_MS) {
+            const bool occupied = raw == SLOTS[i].occupiedLevel;
+            if (!state.ready || occupied != state.occupied) {
+                state.ready = true;
+                state.occupied = occupied;
+                state.dirty = true;
             }
         }
+        anyOccupied |= state.ready && state.occupied;
+    }
+    digitalWrite(LED_PIN, anyOccupied ? HIGH : LOW);
+
+    if (WiFi.status() != WL_CONNECTED) {
+        if (now - lastWifiAttempt >= WIFI_RETRY_MS) {
+            lastWifiAttempt = now;
+            WiFi.disconnect();
+            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+            Serial.println("Retrying WiFi...");
+        }
+        delay(10);
+        return;
     }
 
-    delay(50);
+    // One bounded HTTP attempt per loop. Rotate so a failing slot cannot
+    // prevent other heartbeats. Unsigned subtraction handles millis rollover.
+    for (size_t checked = 0; checked < SLOT_COUNT; ++checked) {
+        const size_t i = nextSlot;
+        nextSlot = (nextSlot + 1) % SLOT_COUNT;
+        auto& state = states[i];
+        const bool due = state.dirty || !state.sent || now - state.lastSuccess >= HEARTBEAT_MS;
+        const bool retryReady = !state.attempted || now - state.lastAttempt >= RETRY_MS;
+        // Never send an unstable reading during an input transition.
+        if (state.ready && now - state.candidateSince >= DEBOUNCE_MS && due && retryReady) {
+            state.attempted = true;
+            state.lastAttempt = now;
+            if (sendStatus(i)) {
+                state.sent = true;
+                state.dirty = false;
+                state.lastSuccess = millis();
+            }
+            break;
+        }
+    }
+    delay(10);
 }
