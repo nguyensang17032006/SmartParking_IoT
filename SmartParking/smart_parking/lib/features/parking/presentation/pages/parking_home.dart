@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// A standalone UI preview. All data and interactions stay on this screen.
-/// No Supabase, API, assets or third-party packages are required by this file.
+/// Home content displayed inside the Scaffold owned by MainLayout.
+/// Uses local sample data; does not initialize app navigation or services.
 class ParkingHome extends StatefulWidget {
   const ParkingHome({super.key});
 
@@ -61,13 +61,6 @@ class _DemoSpot {
   _DemoSpot withState(_SpotState value) => _DemoSpot(code, value);
 }
 
-class _HomeNotice {
-  final IconData icon;
-  final String title;
-  final String detail;
-  const _HomeNotice(this.icon, this.title, this.detail);
-}
-
 class _ParkingHomeState extends State<ParkingHome> {
   final _search = TextEditingController();
   final _mapKey = GlobalKey();
@@ -85,18 +78,6 @@ class _ParkingHomeState extends State<ParkingHome> {
   String? _reservedCode = 'B02';
   String? _savedCode;
   DateTime _arrival = DateTime.now().add(const Duration(minutes: 15));
-  final List<_HomeNotice> _notices = [
-    const _HomeNotice(
-      Icons.local_parking_rounded,
-      'Có chỗ đỗ trống',
-      'A01, A03 và B03 đang sẵn sàng để lựa chọn.',
-    ),
-    const _HomeNotice(
-      Icons.schedule_rounded,
-      'Chỗ đặt của bạn',
-      'Bạn đang giữ ô B02. Xem thời gian đến trên thẻ đặt chỗ.',
-    ),
-  ];
 
   @override
   void dispose() {
@@ -200,14 +181,6 @@ class _ParkingHomeState extends State<ParkingHome> {
       _reservedCode = spot.code;
       _selectedCode = spot.code;
       _arrival = DateTime.now().add(Duration(minutes: result));
-      _notices.insert(
-        0,
-        _HomeNotice(
-          Icons.schedule_rounded,
-          'Đã đặt ô ${spot.code}',
-          'Chỗ được giữ đến ${_clock(_arrival)}.',
-        ),
-      );
     });
     _message('Đã giữ ô ${spot.code} đến ${_clock(_arrival)}.');
   }
@@ -325,134 +298,6 @@ class _ParkingHomeState extends State<ParkingHome> {
     );
   }
 
-  void _showNotices() => showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.white,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (context) => _SheetContent(
-      children: [
-        const _SheetHeading(
-          icon: Icons.notifications_outlined,
-          title: 'Thông báo',
-          subtitle: 'Thông tin về chỗ đỗ của bạn',
-        ),
-        const SizedBox(height: 12),
-        for (final notice in _notices)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _IconTile(icon: notice.icon, color: _HomeColors.red),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notice.title,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notice.detail,
-                        style: const TextStyle(
-                          color: _HomeColors.muted,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
-
-  void _showMyCar() => showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.white,
-    showDragHandle: true,
-    builder: (sheetContext) => _SheetContent(
-      children: [
-        const _SheetHeading(
-          icon: Icons.directions_car_rounded,
-          title: 'Xe của tôi',
-          subtitle: 'Ghi nhớ vị trí đỗ trong khuôn viên trường',
-        ),
-        const SizedBox(height: 20),
-        if (_savedCode == null) ...[
-          const Text(
-            'Bạn chưa lưu vị trí xe.',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Chạm vào ô đang có xe và chọn “Lưu vị trí xe của tôi”.',
-            style: TextStyle(color: _HomeColors.muted, height: 1.5),
-          ),
-        ] else ...[
-          Text(
-            _savedCode!,
-            style: const TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.w800,
-              color: _HomeColors.ink,
-            ),
-          ),
-          const Text(
-            'Bãi ô tô trung tâm',
-            style: TextStyle(color: _HomeColors.muted),
-          ),
-          const SizedBox(height: 20),
-          _HomeButton(
-            label: 'Tìm xe trên sơ đồ',
-            icon: Icons.location_on_outlined,
-            onPressed: () {
-              Navigator.pop(sheetContext);
-              _showRoute(_savedCode!);
-            },
-          ),
-        ],
-        if (_reservedCode != null) ...[
-          const SizedBox(height: 24),
-          _InfoLine(
-            icon: Icons.bookmark_outline_rounded,
-            text: 'Bạn đang đặt $_reservedCode · Đến trước ${_clock(_arrival)}',
-          ),
-        ],
-      ],
-    ),
-  );
-
-  void _showProfile() => showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.white,
-    showDragHandle: true,
-    builder: (context) => const _SheetContent(
-      children: [
-        _SheetHeading(
-          icon: Icons.person_outline_rounded,
-          title: 'Sáng Nguyễn',
-          subtitle: 'Người lái xe · Trường đại học',
-        ),
-        SizedBox(height: 20),
-        _InfoLine(
-          icon: Icons.school_outlined,
-          text: 'Bãi đỗ ô tô trong khuôn viên trường',
-        ),
-        SizedBox(height: 12),
-        _InfoLine(
-          icon: Icons.info_outline_rounded,
-          text: 'Bản xem trước giao diện · Dữ liệu mẫu',
-        ),
-      ],
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     final visible = _spots
@@ -462,168 +307,55 @@ class _ParkingHomeState extends State<ParkingHome> {
               s.code.toLowerCase().contains(_query.toLowerCase()),
         )
         .toList();
-    return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _HomeColors.red,
-          primary: _HomeColors.red,
-          surface: Colors.white,
-        ),
-        scaffoldBackgroundColor: _HomeColors.background,
-      ),
-      child: Scaffold(
-        backgroundColor: _HomeColors.background,
-        body: SafeArea(
-          bottom: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      constraints.maxWidth > 700 ? 28 : 20,
-                      20,
-                      constraints.maxWidth > 700 ? 28 : 20,
-                      28,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _header(),
-                        const SizedBox(height: 24),
-                        _welcome(),
-                        const SizedBox(height: 20),
-                        if (_reservedCode != null) ...[
-                          _reservationCard(),
-                          const SizedBox(height: 20),
+    return ColoredBox(
+      color: _HomeColors.background,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  constraints.maxWidth > 700 ? 28 : 20,
+                  20,
+                  constraints.maxWidth > 700 ? 28 : 20,
+                  28,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _welcome(),
+                    const SizedBox(height: 20),
+                    if (_reservedCode != null) ...[
+                      _reservationCard(),
+                      const SizedBox(height: 20),
+                    ],
+                    _overview(),
+                    const SizedBox(height: 24),
+                    if (constraints.maxWidth >= 900)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: _mapSection()),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 5, child: _slotSection(visible)),
                         ],
-                        _overview(),
-                        const SizedBox(height: 24),
-                        if (constraints.maxWidth >= 900)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 6, child: _mapSection()),
-                              const SizedBox(width: 24),
-                              Expanded(flex: 5, child: _slotSection(visible)),
-                            ],
-                          )
-                        else ...[
-                          _mapSection(),
-                          const SizedBox(height: 24),
-                          _slotSection(visible),
-                        ],
-                      ],
-                    ),
-                  ),
+                      )
+                    else ...[
+                      _mapSection(),
+                      const SizedBox(height: 24),
+                      _slotSection(visible),
+                    ],
+                  ],
                 ),
               ),
             ),
           ),
         ),
-        bottomNavigationBar: NavigationBar(
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFFFDEBF0),
-          selectedIndex: 0,
-          onDestinationSelected: (index) {
-            if (index == 1) _showMyCar();
-            if (index == 2) _showProfile();
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(
-                Icons.grid_view_rounded,
-                color: _HomeColors.red,
-              ),
-              label: 'Bãi xe',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.directions_car_outlined),
-              label: 'Xe của tôi',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              label: 'Tài khoản',
-            ),
-          ],
-        ),
       ),
     );
   }
-
-  Widget _header() => Row(
-    children: [
-      Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: _HomeColors.ink,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: const Icon(
-          Icons.local_parking_rounded,
-          color: Colors.white,
-          size: 26,
-        ),
-      ),
-      const SizedBox(width: 10),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Campus Parking',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: _HomeColors.ink,
-              ),
-            ),
-            SizedBox(height: 2),
-            Text(
-              'Bãi xe trường đại học',
-              style: TextStyle(fontSize: 11, color: _HomeColors.muted),
-            ),
-          ],
-        ),
-      ),
-      IconButton(
-        tooltip: 'Thông báo',
-        onPressed: _showNotices,
-        icon: Badge(
-          label: Text('${_notices.length}'),
-          backgroundColor: _HomeColors.red,
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            color: _HomeColors.ink,
-          ),
-        ),
-      ),
-      const SizedBox(width: 2),
-      Semantics(
-        label: 'Tài khoản Sáng Nguyễn',
-        button: true,
-        child: InkWell(
-          onTap: _showProfile,
-          borderRadius: BorderRadius.circular(24),
-          child: const CircleAvatar(
-            radius: 20,
-            backgroundColor: Color(0xFFE8ECF2),
-            child: Text(
-              'S',
-              style: TextStyle(
-                color: _HomeColors.ink,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
 
   Widget _welcome() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

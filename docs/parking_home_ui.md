@@ -1,41 +1,31 @@
-# Parking Home — xem giao diện trước
+# Parking Home trong MainLayout
 
-Màn hình độc lập với dữ liệu mẫu, không gọi API, Supabase hay ESP32.
-File màn hình chỉ import `package:flutter/material.dart`.
+`ParkingHome` là widget nội dung cho trang Home. MainLayout quản lý Scaffold,
+AppBar, SafeArea, theme và thanh điều hướng chung của ứng dụng.
 
-## Chép vào dự án Flutter hiện tại
+## Tích hợp
 
-1. Chép `parking_home.dart` vào `lib/features/parking/presentation/pages/`.
-2. Chép `parking_home_preview.dart` vào `lib/`.
-3. Trong thư mục chứa `pubspec.yaml`, chạy:
+Chép `parking_home.dart` vào `lib/features/parking/presentation/pages/`.
+Trong `lib/core/app/main_layout.dart`, import:
 
-```bash
-flutter run -t lib/parking_home_preview.dart
+```dart
+import '../../features/parking/presentation/pages/parking_home.dart';
 ```
 
-Nếu muốn xem trên Chrome:
+Thêm `const ParkingHome()` vào danh sách trang đang được MainLayout quản lý.
+Nếu layout dùng IndexedStack, giữ Home trong danh sách children để trạng thái
+lọc, chỗ đặt và vị trí đã lưu được giữ khi chuyển tab.
 
-```bash
-flutter run -d chrome -t lib/parking_home_preview.dart
-```
+## Nội dung Home
 
-Điểm chạy này mở thẳng Parking Home, không khởi tạo đăng nhập hoặc dịch vụ ngoài.
-Nếu dự án chưa lấy dependencies, chạy `flutter pub get` trước.
-Nếu `pubspec.yaml` có `assets: - .env` nhưng chưa có file `.env`, bỏ khai báo asset đó khi chỉ xem UI.
-Màn hình và điểm chạy xem trước không đọc file môi trường.
+- Lời chào và vị trí bãi xe trường đại học.
+- Thẻ chỗ đã đặt, thời gian đến, hủy đặt chỗ và xem đường đến ô.
+- Tổng số ô trống, có xe, đã đặt và mất kết nối.
+- Sơ đồ sáu ô mẫu với tuyến đường từ cổng.
+- Tìm kiếm mã ô, lọc trạng thái, xem chi tiết, đặt/chuyển chỗ và lưu vị trí xe.
 
-## Các tương tác mẫu
+File chỉ import Flutter Material và dùng dữ liệu trong bộ nhớ.
+Chưa nối ESP32, API, tự hết hạn đặt chỗ hoặc thông báo nền.
 
-- Chạm ô trên sơ đồ hoặc thẻ ô để xem chi tiết.
-- Tìm theo mã ô và lọc Trống / Đã đặt / Có xe.
-- Chọn thời gian giữ chỗ và đặt/chuyển ô; tổng số cập nhật trong màn hình.
-- Hủy chỗ đặt trên thẻ đầu trang.
-- Xem tuyến từ cổng đến ô đã chọn.
-- Lưu vị trí tại ô có xe, sau đó mở Xe của tôi để xem lại.
-- Mở thông báo và thẻ tài khoản mẫu.
-
-Các thay đổi chỉ ở bộ nhớ màn hình và đặt lại khi mở lại ứng dụng.
-Chưa nối logic nghiệp vụ, thời gian tự hết hạn hoặc thông báo nền.
-
-Đã kiểm tra cú pháp bằng Dart formatter và tên icon theo Flutter SDK.
-Chưa chạy ứng dụng hoặc kiểm chứng ảnh giao diện trong môi trường phát triển này.
+Đã kiểm tra định dạng/cú pháp bằng Dart formatter. Chưa chạy ứng dụng Flutter
+trong môi trường này.
