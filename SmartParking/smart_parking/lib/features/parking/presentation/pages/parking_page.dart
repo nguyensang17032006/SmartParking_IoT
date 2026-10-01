@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../bloc/parking_bloc.dart';
-import '../bloc/parking_state.dart';
+import '../parking_bloc/parking_bloc.dart';
+import '../parking_bloc/parking_state.dart';
 
 class ParkingPage extends StatelessWidget {
   const ParkingPage({super.key});

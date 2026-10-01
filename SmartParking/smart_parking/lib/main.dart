@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:smart_parking/features/auth/presentation/pages/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/parking/data/datasource/parking_remote_datasource.dart';
 import 'features/parking/data/repository/parking_repository_impl.dart';
 import 'features/parking/domain/usecases/watch_parking_slots.dart';
-import 'features/parking/presentation/bloc/parking_bloc.dart';
-import 'features/parking/presentation/bloc/parking_event.dart';
-import 'features/parking/presentation/pages/parking_page.dart';
+import 'features/parking/presentation/parking_bloc/parking_bloc.dart';
+import 'features/parking/presentation/parking_bloc/parking_event.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
         create: (_) =>
             ParkingBloc(watchParkingSlots: watchParkingSlots)
               ..add(const ParkingWatchStarted()),
-        child: const ParkingPage(),
+        child: const LoginPage(),
       ),
     );
   }
