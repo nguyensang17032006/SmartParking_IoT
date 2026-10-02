@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/parking_slot.dart';
 import '../parking_bloc/parking_bloc.dart';
 import '../parking_bloc/parking_state.dart';
+import 'parking_map.dart';
 
 /// Home content. MainLayout owns the Scaffold and navigation.
 /// Requires an existing BlocProvider<ParkingBloc> above this widget.
@@ -251,26 +252,10 @@ class _ParkingPageState extends State<ParkingPage> {
                               'Thử mã ô khác hoặc đổi bộ lọc trạng thái.',
                         )
                       else
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: visible.length,
-                          gridDelegate:
-                              SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 240,
-                                mainAxisExtent:
-                                    170 +
-                                    MediaQuery.textScalerOf(context).scale(14),
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                              ),
-                          itemBuilder: (context, index) {
-                            final slot = visible[index];
-                            return _SlotCard(
-                              code: slot.code,
-                              occupied: slot.occupied,
-                            );
+                        ParkingMap(
+                          slots: slots,
+                          highlightedCodes: {
+                            for (final slot in visible) slot.code,
                           },
                         ),
                       const SizedBox(height: 8),
@@ -416,65 +401,6 @@ class _StatCard extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _SlotCard extends StatelessWidget {
-  final String code;
-  final bool occupied;
-  const _SlotCard({required this.code, required this.occupied});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = occupied ? _ParkingColors.red : _ParkingColors.green;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withAlpha(60)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            code,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: _ParkingColors.ink,
-            ),
-          ),
-          Center(
-            child: Icon(
-              occupied
-                  ? Icons.directions_car_rounded
-                  : Icons.local_parking_rounded,
-              size: 46,
-              color: color,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: color.withAlpha(20),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              occupied ? 'Có xe' : 'Trống',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _StatusPanel extends StatelessWidget {
