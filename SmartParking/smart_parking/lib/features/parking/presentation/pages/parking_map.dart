@@ -85,6 +85,7 @@ class _ParkingMapState extends State<ParkingMap> {
           ..sort();
 
     return Material(
+      key: const ValueKey('horizontal-parking-map-v2'),
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -134,7 +135,7 @@ class _ParkingMapState extends State<ParkingMap> {
                       children: [
                         Positioned.fill(
                           child: CustomPaint(
-                            painter: _ParkingRoadPainter(destination),
+                            painter: _HorizontalParkingRoadPainter(destination),
                           ),
                         ),
                         for (var row = 0; row < rows.length; row++)
@@ -408,9 +409,9 @@ class _MapBay extends StatelessWidget {
   }
 }
 
-class _ParkingRoadPainter extends CustomPainter {
+class _HorizontalParkingRoadPainter extends CustomPainter {
   final Offset? destination;
-  const _ParkingRoadPainter(this.destination);
+  const _HorizontalParkingRoadPainter(this.destination);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -513,6 +514,6 @@ class _ParkingRoadPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ParkingRoadPainter oldDelegate) =>
+  bool shouldRepaint(covariant _HorizontalParkingRoadPainter oldDelegate) =>
       oldDelegate.destination != destination;
 }
