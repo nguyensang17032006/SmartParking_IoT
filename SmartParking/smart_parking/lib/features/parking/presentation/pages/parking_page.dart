@@ -20,7 +20,7 @@ class _ParkingPageState extends State<ParkingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return Material(
       color: _ParkingColors.background,
       child: BlocBuilder<ParkingBloc, ParkingState>(
         builder: (context, state) {
