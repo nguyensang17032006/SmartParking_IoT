@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/parking_slot.dart';
+import '../../../../domain/entities/parking_slot.dart';
 import 'parking_map_style.dart';
 
 class ParkingBayTile extends StatelessWidget {

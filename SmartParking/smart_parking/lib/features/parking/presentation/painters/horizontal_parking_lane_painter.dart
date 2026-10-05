@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../widgets/parking_map/parking_map_geometry.dart';
-import '../widgets/parking_map/parking_map_style.dart';
+import '../pages/widget/parking_map/parking_map_geometry.dart';
+import '../pages/widget/parking_map/parking_map_style.dart';
 
 class HorizontalParkingLanePainter extends CustomPainter {
   final Offset? destination;

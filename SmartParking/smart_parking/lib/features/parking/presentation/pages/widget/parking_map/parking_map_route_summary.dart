@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/parking_route.dart';
+import '../../../../domain/entities/parking_route.dart';
 import 'parking_map_style.dart';
 
 class ParkingMapRouteSummary extends StatelessWidget {

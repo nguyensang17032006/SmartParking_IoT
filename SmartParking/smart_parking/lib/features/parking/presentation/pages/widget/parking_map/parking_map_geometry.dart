@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/parking_map_layout.dart';
-import '../../../domain/entities/parking_route.dart';
+import '../../../../domain/entities/parking_map_layout.dart';
+import '../../../../domain/entities/parking_route.dart';
 
 /// Screen geometry belongs to Presentation, never Domain or Data.
 class ParkingMapGeometry {

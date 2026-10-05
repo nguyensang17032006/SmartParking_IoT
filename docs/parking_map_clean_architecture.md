@@ -14,7 +14,7 @@ Dự án đã có dependencies `bloc`, `flutter_bloc` và `equatable`.
 Trong ParkingPage, dùng import trực tiếp đến widget mới:
 
 ```dart
-import 'package:smart_parking/features/parking/presentation/widgets/parking_map/parking_map.dart';
+import 'package:smart_parking/features/parking/presentation/pages/widget/parking_map.dart';
 ```
 
 Ở nhánh ParkingLoaded của BlocBuilder:
@@ -60,16 +60,16 @@ Tất cả đường dẫn trong bảng tính từ `lib/features/parking/`.
 | `domain/usecases/build_parking_route.dart` | Trả tuyến nếu ô chưa có xe và đã được bố trí trên sơ đồ; trường hợp khác trả null. |
 | `presentation/parking_map_cubit/parking_map_state.dart` | Slots, bố trí, tập mã được làm nổi bật, selectedId và route. |
 | `presentation/parking_map_cubit/parking_map_cubit.dart` | selectSlot, clearSelection và updateData. Xóa lựa chọn khi ô có xe, bị lọc khỏi tập nổi bật hoặc bị loại khỏi bố trí. |
-| `presentation/widgets/parking_map/parking_map.dart` | Widget công khai. Tạo Cubit khi mở, cập nhật đầu vào khi widget cha đổi dữ liệu, đóng Cubit khi hủy. |
-| `presentation/widgets/parking_map/parking_map_view.dart` | Khung thẻ chứa header, viewport, thông tin tuyến và thông báo ô chưa bố trí. |
-| `presentation/widgets/parking_map/parking_map_header.dart` | Tiêu đề, hướng dẫn và chú giải trạng thái. |
-| `presentation/widgets/parking_map/parking_map_viewport.dart` | Vùng phóng to/di chuyển; đặt đường, ô và nhãn cổng trên cùng Stack. |
-| `presentation/widgets/parking_map/parking_bay_tile.dart` | Một ô đỗ: mã ô, biểu tượng, trạng thái, viền chọn và thao tác chạm. |
-| `presentation/widgets/parking_map/parking_map_legend.dart` | Chấm màu và tên một trạng thái. |
-| `presentation/widgets/parking_map/parking_map_gate.dart` | Biểu tượng và nhãn cổng vào/cổng ra. |
-| `presentation/widgets/parking_map/parking_map_route_summary.dart` | Hiện “Cổng vào → mã ô” và nút Bỏ chọn. |
-| `presentation/widgets/parking_map/parking_map_geometry.dart` | Tọa độ màn hình, kích thước ô, vị trí cổng, chuyển route logic thành Offset. |
-| `presentation/widgets/parking_map/parking_map_style.dart` | Màu của ô trống, có xe, được chọn, chưa có dữ liệu. |
+| `presentation/pages/widget/parking_map/parking_map.dart` | Widget công khai. Tạo Cubit khi mở, cập nhật đầu vào khi widget cha đổi dữ liệu, đóng Cubit khi hủy. |
+| `presentation/pages/widget/parking_map/parking_map_view.dart` | Khung thẻ chứa header, viewport, thông tin tuyến và thông báo ô chưa bố trí. |
+| `presentation/pages/widget/parking_map/parking_map_header.dart` | Tiêu đề, hướng dẫn và chú giải trạng thái. |
+| `presentation/pages/widget/parking_map/parking_map_viewport.dart` | Vùng phóng to/di chuyển; đặt đường, ô và nhãn cổng trên cùng Stack. |
+| `presentation/pages/widget/parking_map/parking_bay_tile.dart` | Một ô đỗ: mã ô, biểu tượng, trạng thái, viền chọn và thao tác chạm. |
+| `presentation/pages/widget/parking_map/parking_map_legend.dart` | Chấm màu và tên một trạng thái. |
+| `presentation/pages/widget/parking_map/parking_map_gate.dart` | Biểu tượng và nhãn cổng vào/cổng ra. |
+| `presentation/pages/widget/parking_map/parking_map_route_summary.dart` | Hiện “Cổng vào → mã ô” và nút Bỏ chọn. |
+| `presentation/pages/widget/parking_map/parking_map_geometry.dart` | Tọa độ màn hình, kích thước ô, vị trí cổng, chuyển route logic thành Offset. |
+| `presentation/pages/widget/parking_map/parking_map_style.dart` | Màu của ô trống, có xe, được chọn, chưa có dữ liệu. |
 | `presentation/painters/horizontal_parking_lane_painter.dart` | Vẽ đường ngang, vạch đứt, mũi tên một chiều, trụ cổng và tuyến xanh. |
 | `presentation/pages/parking_map.dart` | Export tương thích để màn hình cũ dùng widget mới. |
 
@@ -162,9 +162,9 @@ Với B01, x vẫn là 156, y = 212 - 4 = 208. Tuyến đi ngang rồi rẽ xu�
 
 ## 7. Kiểm tra và giới hạn
 
-Đã chạy `tool/check_parking_map_domain.dart`: 10 kiểm tra Domain qua, gồm hai dãy,
+Đã chạy `tool/check_parking_map_domain.dart`: 15 kiểm tra Domain qua, gồm hai dãy,
 ô có xe, ô ngoài bố trí, thứ tự vật lý, hàng dài/ngắn khác nhau, cấu hình bất biến,
-mã trùng, mã trống và bố trí rỗng. Script chạy độc lập bằng Dart:
+mã trùng, mã trống, bố trí rỗng và năm kiểm tra số liệu tổng quan bãi xe. Script chạy độc lập bằng Dart:
 
 ```bash
 dart tool/check_parking_map_domain.dart

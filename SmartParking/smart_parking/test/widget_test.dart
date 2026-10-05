@@ -1,55 +1,94 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smart_parking/features/parking/data/datasource/parking_remote_datasource.dart';
-import 'package:smart_parking/features/parking/data/repository/parking_repository_impl.dart';
+import 'package:smart_parking/core/app/main_layout.dart';
+import 'package:smart_parking/features/parking/domain/entities/parking_slot.dart';
+import 'package:smart_parking/features/parking/domain/repository/parking_repository.dart';
 import 'package:smart_parking/features/parking/domain/usecases/watch_parking_slots.dart';
-
 import 'package:smart_parking/main.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+const _slots = [
+  ParkingSlot(id: '1', code: 'A01', occupied: false),
+  ParkingSlot(id: '2', code: 'A02', occupied: true),
+  ParkingSlot(id: '3', code: 'A03', occupied: false),
+  ParkingSlot(id: '4', code: 'B01', occupied: true),
+  ParkingSlot(id: '5', code: 'B02', occupied: false),
+  ParkingSlot(id: '6', code: 'B03', occupied: true),
+];
+
+class _FakeRepository implements ParkingRepository {
+  int watchCount = 0;
+  @override
+  Stream<List<ParkingSlot>> watchParkingSlots() {
+    watchCount++;
+    return Stream.value(_slots);
+  }
+}
+
+Future<_FakeRepository> _openHome(WidgetTester tester) async {
+  final repository = _FakeRepository();
+  await tester.pumpWidget(
+    MyApp(
+      watchParkingSlots: WatchParkingSlots(repository),
+      initialRoute: '/home',
+    ),
+  );
+  await tester.pumpAndSettle();
+  return repository;
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    WidgetsFlutterBinding.ensureInitialized();
+  testWidgets('Home uses sensor totals and handles a narrow screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _openHome(tester);
+    expect(find.text('3 chỗ còn trống'), findsOneWidget);
+    expect(find.text('3/6 ô đang có xe'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
-    await dotenv.load(fileName: ".env");
+  testWidgets('Home and map navigation preserve route and search', (
+    tester,
+  ) async {
+    final repository = await _openHome(tester);
+    await tester.tap(find.text('Sơ đồ'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'A01');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('A01'));
+    await tester.tap(find.text('A01'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cổng vào → A01'), findsOneWidget);
 
-    await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL']!,
-      anonKey: dotenv.env['SUPABASE_PUBLISHABLE_KEY']!,
+    await tester.tap(find.text('Trang chủ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sơ đồ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cổng vào → A01'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'A01',
     );
+    expect(repository.watchCount, 1);
+    expect(tester.takeException(), isNull);
+  });
 
-    final supabase = Supabase.instance.client;
-
-    // Data source
-    final remoteDataSource = ParkingRemoteDataSourceImpl(supabase: supabase);
-
-    // Repository
-    final repository = ParkingRepositoryImpl(
-      remoteDataSource: remoteDataSource,
+  testWidgets('Named home route can access the root ParkingBloc', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+    await tester.pumpWidget(
+      MyApp(watchParkingSlots: WatchParkingSlots(repository)),
     );
-
-    // Use case
-    final watchParkingSlots = WatchParkingSlots(repository);
-    await tester.pumpWidget(MyApp(watchParkingSlots: watchParkingSlots));
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.text('Đăng nhập tài khoản')))
+        .pushNamedAndRemoveUntil('/home', (_) => false);
+    await tester.pumpAndSettle();
+    expect(find.byType(MainLayout), findsOneWidget);
+    expect(find.text('3 chỗ còn trống'), findsOneWidget);
+    expect(repository.watchCount, 1);
+    expect(tester.takeException(), isNull);
   });
 }

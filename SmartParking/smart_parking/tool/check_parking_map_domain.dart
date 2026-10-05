@@ -1,4 +1,5 @@
 import '../lib/features/parking/domain/entities/parking_map_layout.dart';
+import '../lib/features/parking/domain/entities/parking_overview.dart';
 import '../lib/features/parking/domain/usecases/build_parking_route.dart';
 
 void main() {
@@ -86,5 +87,38 @@ void main() {
         empty.columnCount == 1,
   );
 
-  print('Passed $count parking-map domain checks.');
+  final noSlots = ParkingOverview.fromOccupancy([]);
+  check(
+    'No data is not a full car park, and avoids division by zero',
+    noSlots.totalCount == 0 && noSlots.occupancyRate == 0 && !noSlots.isFull,
+  );
+  final mixed = ParkingOverview.fromOccupancy([false, true, false, true]);
+  check(
+    'Real sensor occupancy is aggregated into consistent totals',
+    mixed.availableCount == 2 &&
+        mixed.occupiedCount == 2 &&
+        mixed.totalCount == 4 &&
+        mixed.occupancyRate == 0.5,
+  );
+  final full = ParkingOverview.fromOccupancy([true, true]);
+  check(
+    'A full car park has no free bays and 100 percent occupancy',
+    full.isFull && full.availableCount == 0 && full.occupancyRate == 1,
+  );
+  final available = ParkingOverview.fromOccupancy([false, false]);
+  check(
+    'An empty-of-cars car park remains available',
+    !available.isFull &&
+        available.availableCount == 2 &&
+        available.occupancyRate == 0,
+  );
+  final readings = [true, false];
+  final snapshotOverview = ParkingOverview.fromOccupancy(readings);
+  readings.clear();
+  check(
+    'Sensor input mutations do not alter an already rendered snapshot',
+    snapshotOverview.totalCount == 2 && snapshotOverview.occupiedCount == 1,
+  );
+
+  print('Passed $count parking domain checks.');
 }

@@ -15,6 +15,9 @@ class AppColors {
   static const text = Color(0xFF191C1E);
   static const textMuted = Color(0xFF61646B);
   static const outline = Color(0xFFC6C6CD);
+  // Aliases kept for existing screens using the earlier color names.
+  static const ink = primary;
+  static const muted = textMuted;
 }
 
 ThemeData buildAppTheme() {
