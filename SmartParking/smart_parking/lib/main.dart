@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:smart_parking/features/auth/presentation/pages/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:smart_parking/core/routes/app_routes.dart';
+import 'package:smart_parking/core/routes/app_router.dart';
 import 'features/parking/data/datasource/parking_remote_datasource.dart';
 import 'features/parking/data/repository/parking_repository_impl.dart';
 import 'features/parking/domain/usecases/watch_parking_slots.dart';
@@ -42,13 +42,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: BlocProvider(
-        create: (_) =>
-            ParkingBloc(watchParkingSlots: watchParkingSlots)
-              ..add(const ParkingWatchStarted()),
-        child: const LoginPage(),
+    return BlocProvider(
+      create: (_) =>
+          ParkingBloc(watchParkingSlots: watchParkingSlots)
+            ..add(const ParkingWatchStarted()),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        initialRoute: AppRoutes.login,
+        onGenerateRoute: AppRouter.onGenerateRoute,
       ),
     );
   }

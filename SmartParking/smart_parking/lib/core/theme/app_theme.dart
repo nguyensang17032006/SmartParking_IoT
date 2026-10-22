@@ -1,57 +1,73 @@
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class AppColors {
-  static const background = Color(0xFFF7F9FB);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceLow = Color(0xFFF2F4F6);
-  static const surfaceContainer = Color(0xFFECEEF0);
-  static const surfaceHigh = Color(0xFFE6E8EA);
-  static const primary = Color(0xFF131B2E);
-  static const secondary = Color(0xFFE21E49);
-  static const secondaryDark = Color(0xFFBA0035);
-  static const green = Color(0xFF4EDEA3);
-  static const greenDark = Color(0xFF005236);
-  static const amber = Color(0xFFF59E0B);
-  static const text = Color(0xFF191C1E);
-  static const textMuted = Color(0xFF61646B);
-  static const outline = Color(0xFFC6C6CD);
-}
+import 'app_colors.dart';
+import 'app_radius.dart';
+import 'app_text_styles.dart';
 
-ThemeData buildAppTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: AppColors.secondary,
-    brightness: Brightness.light,
-    primary: AppColors.primary,
-    secondary: AppColors.secondary,
-    surface: AppColors.surface,
-  );
+class AppTheme {
+  AppTheme._();
 
-  return ThemeData(
-    useMaterial3: true,
-    colorScheme: scheme,
-    scaffoldBackgroundColor: AppColors.background,
-    fontFamily: 'Tahoma',
-    appBarTheme: const AppBarTheme(
-      elevation: 0,
-      centerTitle: false,
-      backgroundColor: AppColors.background,
-      foregroundColor: AppColors.text,
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: AppColors.surfaceLow,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
+  static ThemeData get light {
+    return ThemeData(
+      useMaterial3: true,
+      scaffoldBackgroundColor: AppColors.background,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        surface: AppColors.surface,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
+      textTheme: GoogleFonts.beVietnamProTextTheme().copyWith(
+        displayLarge: AppTextStyles.displayLarge,
+        headlineLarge: AppTextStyles.headingLarge,
+        headlineMedium: AppTextStyles.headingMedium,
+        headlineSmall: AppTextStyles.headingSmall,
+        titleLarge: AppTextStyles.titleLarge,
+        titleMedium: AppTextStyles.titleMedium,
+        bodyLarge: AppTextStyles.bodyLarge,
+        bodyMedium: AppTextStyles.bodyMedium,
+        bodySmall: AppTextStyles.bodySmall,
+        labelLarge: AppTextStyles.buttonLarge,
+      ).apply(
+        bodyColor: AppColors.navy,
+        displayColor: AppColors.navy,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.secondary),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.input,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.input,
+          borderSide: const BorderSide(
+            color: AppColors.border,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: AppRadius.input,
+          borderSide: const BorderSide(
+            color: AppColors.primary,
+            width: 1.5,
+          ),
+        ),
       ),
-    ),
-  );
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(50),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.button,
+          ),
+          textStyle: AppTextStyles.buttonLarge,
+        ),
+      ),
+    );
+  }
 }

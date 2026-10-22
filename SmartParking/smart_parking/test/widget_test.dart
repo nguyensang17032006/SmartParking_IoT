@@ -23,6 +23,7 @@ void main() {
 
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
+      // ignore: deprecated_member_use
       anonKey: dotenv.env['SUPABASE_PUBLISHABLE_KEY']!,
     );
 
