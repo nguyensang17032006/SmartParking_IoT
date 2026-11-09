@@ -377,11 +377,115 @@
     font-weight: 600;
 }
 
+.floor-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.floor-delete-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 36px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #dc2626;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.floor-delete-button:hover:not(:disabled) {
+    background: #fee2e2;
+}
+
+.floor-delete-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .floor-name-field input {
     padding: 10px;
     border: 1px solid #dbe4ec;
     border-radius: 8px;
     color: #1e293b;
+}
+
+.parking-lot-selector {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e5ebf1;
+    border-radius: 14px;
+}
+
+.parking-lot-selector label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 230px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.parking-lot-selector select {
+    padding: 11px 13px;
+    border: 1px solid #dbe4ec;
+    border-radius: 8px;
+    background: white;
+    font-size: 13px;
+}
+
+.parking-lot-selector select:disabled {
+    opacity: 0.5;
+}
+
+.parking-lot-selector {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e5ebf1;
+    border-radius: 14px;
+}
+
+.parking-lot-selector label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 230px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.parking-lot-selector select {
+    padding: 11px 13px;
+    border: 1px solid #dbe4ec;
+    border-radius: 8px;
+    background: white;
+    font-size: 13px;
+}
+
+.parking-lot-selector select:disabled {
+    opacity: 0.5;
+}
+
+.selector-error {
+    color: #dc2626;
+    font-size: 12px;
+}
+
+.selector-error {
+    color: #dc2626;
+    font-size: 12px;
 }
 
 @media (max-width: 1100px) {

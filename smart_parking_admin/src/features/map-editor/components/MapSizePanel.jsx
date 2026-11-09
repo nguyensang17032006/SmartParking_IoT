@@ -95,7 +95,7 @@ export default function MapSizePanel({
                     onClick={() => onTrimEdge("left")}
                     disabled={mapSize.columns <= 2}
                 >
-                    <ArrowLeft size={16} />
+                    <ArrowRight size={16} />
                     Giảm cột trái
                 </button>
 
@@ -104,7 +104,7 @@ export default function MapSizePanel({
                     onClick={() => onTrimEdge("right")}
                     disabled={mapSize.columns <= 2}
                 >
-                    <ArrowRight size={16} />
+                    <ArrowLeft size={16} />
                     Giảm cột phải
                 </button>
 
@@ -113,7 +113,7 @@ export default function MapSizePanel({
                     onClick={() => onTrimEdge("top")}
                     disabled={mapSize.rows <= 2}
                 >
-                    <ArrowUp size={16} />
+                    <ArrowDown size={16} />
                     Giảm hàng trên
                 </button>
 
@@ -122,7 +122,7 @@ export default function MapSizePanel({
                     onClick={() => onTrimEdge("bottom")}
                     disabled={mapSize.rows <= 2}
                 >
-                    <ArrowDown size={16} />
+                    <ArrowUp size={16} />
                     Giảm hàng dưới
                 </button>
             </div>

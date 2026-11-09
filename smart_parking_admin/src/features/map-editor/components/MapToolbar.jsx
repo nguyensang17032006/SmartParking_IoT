@@ -1,4 +1,3 @@
-
 import {
   MousePointer2,
   ParkingSquare,
@@ -7,18 +6,19 @@ import {
   DoorOpen,
   LogOut,
   TrendingUp,
+  Ban,
   Save,
   Trash2,
+  GitBranch,
+  Database,
 } from "lucide-react";
 
 const objectTools = [
   { type: "slot", label: "Ô đỗ", icon: ParkingSquare },
-  {
-    type: "gate",
-    label: "Cổng",
-    icon: DoorOpen,
-  },
+  { type: "gate_in", label: "Cổng vào", icon: DoorOpen },
+  { type: "gate_out", label: "Cổng ra", icon: LogOut },
   { type: "ramp", label: "Dốc", icon: TrendingUp },
+  { type: "obstacle", label: "Vật cản", icon: Ban },
 ];
 
 export default function MapToolbar({
@@ -28,15 +28,17 @@ export default function MapToolbar({
   onRoadWidthChange,
   onAdd,
   onSave,
+  onPublish,
+  onOpenRamps,
   onDelete,
   selectedId,
+  isSaving = false,
 }) {
   return (
     <div className="map-toolbar">
       <div className="toolbar-tools">
         <button
-          className={`map-tool-button ${tool === "select" ? "active" : ""
-            }`}
+          className={`map-tool-button ${tool === "select" ? "active" : ""}`}
           onClick={() => onToolChange("select")}
         >
           <MousePointer2 size={17} />
@@ -55,8 +57,7 @@ export default function MapToolbar({
         ))}
 
         <button
-          className={`map-tool-button ${tool === "road" ? "active" : ""
-            }`}
+          className={`map-tool-button ${tool === "road" ? "active" : ""}`}
           onClick={() => onToolChange("road")}
         >
           <Paintbrush size={17} />
@@ -64,8 +65,7 @@ export default function MapToolbar({
         </button>
 
         <button
-          className={`map-tool-button ${tool === "eraser" ? "active" : ""
-            }`}
+          className={`map-tool-button ${tool === "eraser" ? "active" : ""}`}
           onClick={() => onToolChange("eraser")}
         >
           <Eraser size={17} />
@@ -91,6 +91,24 @@ export default function MapToolbar({
       </div>
 
       <div className="toolbar-actions">
+        {onOpenRamps && (
+          <button
+            type="button"
+            className="map-tool-button"
+            style={{
+              background: "#fffbeb",
+              borderColor: "#fde68a",
+              color: "#b45309",
+              fontWeight: "600",
+            }}
+            onClick={onOpenRamps}
+            title="Thiết lập liên kết dốc giữa các tầng cho thuật toán A*"
+          >
+            <GitBranch size={16} />
+            Kết nối dốc liên tầng
+          </button>
+        )}
+
         <button
           className="map-delete-button"
           disabled={!selectedId || tool !== "select"}
@@ -102,10 +120,16 @@ export default function MapToolbar({
 
         <button
           className="map-save-button"
-          onClick={onSave}
+          style={{
+            background: "#0f766e",
+            borderColor: "#0f766e",
+          }}
+          disabled={isSaving}
+          onClick={() => onPublish && onPublish("published")}
+          title="Lưu toàn bộ tầng, ô đỗ, dốc và liên kết lên CSDL Supabase"
         >
-          <Save size={16} />
-          Lưu
+          <Database size={16} />
+          {isSaving ? "Đang lưu CSDL..." : "Lưu vào Database"}
         </button>
       </div>
     </div>

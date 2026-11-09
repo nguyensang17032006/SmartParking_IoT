@@ -1,5 +1,5 @@
 
-import { Layers3, Plus } from "lucide-react";
+import { Layers3, Plus, Trash2 } from "lucide-react";
 
 export default function FloorSelector({
     floors,
@@ -7,6 +7,7 @@ export default function FloorSelector({
     onSelect,
     onAdd,
     onRename,
+    onDelete
 }) {
     const currentFloor = floors.find(
         (floor) => floor.id === currentFloorId
@@ -20,19 +21,33 @@ export default function FloorSelector({
             </div>
 
             <div className="floor-selector-actions">
+
                 {floors.map((floor) => (
-                    <button
-                        key={floor.id}
-                        className={
-                            currentFloorId === floor.id
-                                ? "floor-button active"
-                                : "floor-button"
-                        }
-                        onClick={() => onSelect(floor.id)}
-                    >
-                        {floor.name}
-                    </button>
+                    <div className="floor-item" key={floor.id}>
+                        <button
+                            type="button"
+                            className={
+                                currentFloorId === floor.id
+                                    ? "floor-button active"
+                                    : "floor-button"
+                            }
+                            onClick={() => onSelect(floor.id)}
+                        >
+                            {floor.name}
+                        </button>
+
+                        <button
+                            type="button"
+                            className="floor-delete-button"
+                            title={`Xóa ${floor.name}`}
+                            disabled={floors.length <= 1}
+                            onClick={() => onDelete(floor.id)}
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
                 ))}
+
 
                 <button
                     className="floor-add-button"
