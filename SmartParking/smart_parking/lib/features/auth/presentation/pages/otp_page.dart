@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
+
 import 'package:smart_parking/core/routes/app_routes.dart';
-import 'package:smart_parking/core/theme/app_spacing.dart';
 import 'package:smart_parking/core/theme/app_colors.dart';
+import 'package:smart_parking/core/theme/app_spacing.dart';
 import 'package:smart_parking/core/theme/app_text_styles.dart';
 import 'package:smart_parking/core/widgets/app_button.dart';
 
@@ -14,6 +16,7 @@ enum OtpFlow { login, signup, recoveryEmail, recoveryPhone }
 class OtpPage extends StatefulWidget {
   final String destination;
   final OtpFlow flow;
+
   final Future<bool> Function(String code)? onVerify;
   final Future<bool> Function()? onResend;
   final VoidCallback? onVerified;
@@ -36,82 +39,17 @@ class _OtpPageState extends State<OtpPage> {
   final otpFocusNode = FocusNode();
 
   Timer? _timer;
+
   int _secondsRemaining = 180;
+
   bool isLoading = false;
   bool isResending = false;
 
-  bool get isEmailOtp => widget.flow == OtpFlow.recoveryEmail;
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _verifyOtp() {
-    FocusScope.of(context).unfocus();
-
-    switch (widget.flow) {
-      case OtpFlow.recoveryEmail:
-        Navigator.pushNamed(
-          context,
-          AppRoutes.updatePhone,
-          arguments: {'recoveryToken': 'ui-only'},
-        );
-        break;
-
-      case OtpFlow.recoveryPhone:
-        Navigator.pushNamed(
-          context,
-          AppRoutes.recoverySuccess,
-          arguments: {'phone': widget.destination},
-        );
-        break;
-
-      case OtpFlow.login:
-        // TODO: Điều hướng đến HomePage.
-        break;
-
-      case OtpFlow.signup:
-        // TODO: Điều hướng sau đăng ký.
-        break;
-    }
-  }
-
-  Future<void> _resendOtp() async {
-    if (isResending || _secondsRemaining > 0) return;
-    if (widget.onResend == null) {
-      _showMessage('Chưa kết nối API gửi lại OTP');
-      return;
-    }
-    setState(() => isResending = true);
-    bool sent = false;
-    try {
-      sent = await widget.onResend!();
-    } catch (_) {
-      if (mounted) _showMessage('Không thể gửi lại OTP');
-      return;
-    } finally {
-      if (mounted) setState(() => isResending = false);
-    }
-    if (!mounted) return;
-    if (sent) {
-      otpController.clear();
-      setState(() => _secondsRemaining = 180);
-      _startTimer();
-      _showMessage('Đã gửi lại mã xác thực');
-    } else {
-      _showMessage('Gửi lại mã thất bại');
-    }
-  }
-
-  String get formattedTime {
-    final minutes = _secondsRemaining ~/ 60;
-    final seconds = _secondsRemaining % 60;
-
-    return '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')}';
-  }
+  // Login, Signup và Recovery Email đều dùng email.
+  bool get isEmailOtp =>
+      widget.flow == OtpFlow.login ||
+      widget.flow == OtpFlow.signup ||
+      widget.flow == OtpFlow.recoveryEmail;
 
   @override
   void initState() {
@@ -119,6 +57,23 @@ class _OtpPageState extends State<OtpPage> {
     _startTimer();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    otpController.dispose();
+    otpFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // COUNTDOWN
   void _startTimer() {
     _timer?.cancel();
 
@@ -129,19 +84,132 @@ class _OtpPageState extends State<OtpPage> {
       }
 
       if (_secondsRemaining > 0) {
-        setState(() => _secondsRemaining--);
+        setState(() {
+          _secondsRemaining--;
+        });
       } else {
         timer.cancel();
       }
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    otpController.dispose();
-    otpFocusNode.dispose();
-    super.dispose();
+  String get formattedTime {
+    final minutes = _secondsRemaining ~/ 60;
+    final seconds = _secondsRemaining % 60;
+
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+  }
+
+  // VERIFY OTP
+  Future<void> _verifyOtp() async {
+    if (isLoading || isResending) return;
+
+    final code = otpController.text.trim();
+
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      _showMessage('Vui lòng nhập đủ 6 chữ số OTP');
+      return;
+    }
+
+    if (widget.onVerify == null) {
+      _showMessage('Chưa kết nối chức năng xác thực OTP');
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Callback gọi AuthViewModel -> UseCase -> Supabase.
+      final success = await widget.onVerify!(code);
+
+      if (!mounted) return;
+
+      if (!success) {
+        _showMessage('Xác thực thất bại. Vui lòng kiểm tra mã OTP.');
+        return;
+      }
+
+      // Callback điều hướng do Login/Signup truyền vào.
+      if (widget.onVerified != null) {
+        widget.onVerified!();
+        return;
+      }
+
+      // Điều hướng mặc định chỉ cho Login/Signup.
+      switch (widget.flow) {
+        case OtpFlow.login:
+        case OtpFlow.signup:
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (route) => false,
+          );
+          break;
+
+        case OtpFlow.recoveryEmail:
+        case OtpFlow.recoveryPhone:
+          _showMessage('Chức năng khôi phục chưa được triển khai');
+          break;
+      }
+    } catch (e) {
+      _showMessage('Có lỗi xảy ra: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // RESEND OTP
+  Future<void> _resendOtp() async {
+    if (isLoading || isResending || _secondsRemaining > 0) {
+      return;
+    }
+
+    if (widget.onResend == null) {
+      _showMessage('Chưa kết nối chức năng gửi lại OTP');
+      return;
+    }
+
+    setState(() {
+      isResending = true;
+    });
+
+    try {
+      final success = await widget.onResend!();
+
+      if (!mounted) return;
+
+      if (!success) {
+        _showMessage('Không thể gửi lại mã OTP');
+        return;
+      }
+
+      otpController.clear();
+
+      setState(() {
+        _secondsRemaining = 180;
+      });
+
+      _startTimer();
+
+      _showMessage('Đã gửi lại mã xác thực');
+    } catch (e) {
+      _showMessage('Gửi lại OTP thất bại: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isResending = false;
+        });
+      }
+    }
   }
 
   @override
@@ -229,7 +297,7 @@ class _OtpPageState extends State<OtpPage> {
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isLoading ? null : () => Navigator.pop(context),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               icon: const Icon(
@@ -240,11 +308,12 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
+
           // OTP ILLUSTRATION
           _buildOtpIllustration(),
 
-          SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.xl),
 
           // TITLE
           Text(
@@ -256,7 +325,7 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
 
           // DESCRIPTION
           Text(
@@ -269,8 +338,9 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xs),
 
+          // DESTINATION
           Text(
             widget.destination,
             textAlign: TextAlign.center,
@@ -280,12 +350,13 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.xxl),
+          const SizedBox(height: AppSpacing.xxl),
 
           // OTP INPUT
           LayoutBuilder(
             builder: (context, constraints) {
               final availableWidth = constraints.maxWidth;
+
               final pinWidth = ((availableWidth - 40) / 6)
                   .clamp(32.0, 48.0)
                   .toDouble();
@@ -295,6 +366,8 @@ class _OtpPageState extends State<OtpPage> {
                 controller: otpController,
                 focusNode: otpFocusNode,
                 keyboardType: TextInputType.number,
+                enabled: !isLoading && !isResending,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 defaultPinTheme: pinTheme.copyWith(width: pinWidth),
                 focusedPinTheme: pinTheme.copyWith(
                   width: pinWidth,
@@ -313,7 +386,7 @@ class _OtpPageState extends State<OtpPage> {
             },
           ),
 
-          SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.xl),
 
           // COUNTDOWN
           Wrap(
@@ -321,7 +394,7 @@ class _OtpPageState extends State<OtpPage> {
             spacing: 5,
             children: [
               Text(
-                'Mã OTP có hiệu lực trong',
+                'Có thể gửi lại mã sau',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.secondary,
                 ),
@@ -336,7 +409,7 @@ class _OtpPageState extends State<OtpPage> {
             ],
           ),
 
-          SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.xl),
 
           // RESEND OTP
           Text(
@@ -347,10 +420,10 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xs),
 
           TextButton(
-            onPressed: _secondsRemaining == 0 && !isResending
+            onPressed: _secondsRemaining == 0 && !isResending && !isLoading
                 ? _resendOtp
                 : null,
             child: Text(
@@ -360,7 +433,7 @@ class _OtpPageState extends State<OtpPage> {
                   ? 'Gửi lại mã ($formattedTime)'
                   : 'Gửi lại mã',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: _secondsRemaining == 0
+                color: _secondsRemaining == 0 && !isResending && !isLoading
                     ? AppColors.primary
                     : AppColors.secondary,
                 fontWeight: FontWeight.w700,
@@ -368,7 +441,7 @@ class _OtpPageState extends State<OtpPage> {
             ),
           ),
 
-          SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.xl),
 
           // VERIFY BUTTON
           SizedBox(
@@ -380,7 +453,7 @@ class _OtpPageState extends State<OtpPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               borderRadius: BorderRadius.circular(14),
               onPressed: () {
-                if (isLoading) return;
+                if (isLoading || isResending) return;
                 _verifyOtp();
               },
               child: isLoading
@@ -429,6 +502,7 @@ class _OtpPageState extends State<OtpPage> {
               shape: BoxShape.circle,
             ),
           ),
+
           Transform.rotate(
             angle: -0.10,
             child: Icon(
@@ -439,6 +513,7 @@ class _OtpPageState extends State<OtpPage> {
               color: AppColors.navy,
             ),
           ),
+
           Positioned(
             right: 0,
             top: 42,

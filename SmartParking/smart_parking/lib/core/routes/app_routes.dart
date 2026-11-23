@@ -8,4 +8,5 @@ class AppRoutes {
   static const String recoverySuccess = '/recovery-success';
   static const String updatePhone = '/update-phone';
   static const String home = '/home';
+  static const String mainLayout = '/main-layout';
 }

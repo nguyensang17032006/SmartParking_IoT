@@ -6,6 +6,7 @@ import 'package:smart_parking/features/auth/presentation/pages/otp_page.dart';
 import 'package:smart_parking/features/auth/presentation/pages/recovery_page.dart';
 import 'package:smart_parking/features/auth/presentation/pages/recovery_success_page.dart';
 import 'package:smart_parking/features/auth/presentation/pages/updatephone_page.dart';
+import 'package:smart_parking/main_layout.dart';
 
 class AppRouter {
   AppRouter._();
@@ -71,7 +72,8 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => OtpPage(destination: destination, flow: flow),
         );
-
+      case AppRoutes.mainLayout:
+        return MaterialPageRoute(builder: (_) => const MainLayout());
       default:
         return MaterialPageRoute(
           builder: (_) => const LoginPage(),

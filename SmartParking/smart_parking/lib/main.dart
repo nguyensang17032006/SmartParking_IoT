@@ -1,56 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:smart_parking/core/routes/app_routes.dart';
 import 'package:smart_parking/core/routes/app_router.dart';
-import 'features/parking/data/datasource/parking_remote_datasource.dart';
-import 'features/parking/data/repository/parking_repository_impl.dart';
-import 'features/parking/domain/usecases/watch_parking_slots.dart';
-import 'features/parking/presentation/parking_bloc/parking_bloc.dart';
-import 'features/parking/presentation/parking_bloc/parking_event.dart';
+import 'package:smart_parking/core/routes/app_routes.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:smart_parking/main_layout.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  // Load environment variables
+  await dotenv.load(fileName: '.env');
+
   debugPrint('Supabase URL loaded: ${dotenv.env['SUPABASE_URL'] != null}');
 
   debugPrint(
-    'Supabase key loaded: ${dotenv.env['SUPABASE_PUBLISHABLE_KEY'] != null}',
+    'Supabase key loaded: '
+    '${dotenv.env['SUPABASE_PUBLISHABLE_KEY'] != null}',
   );
+
+  // Initialize Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     publishableKey: dotenv.env['SUPABASE_PUBLISHABLE_KEY']!,
   );
 
-  final supabase = Supabase.instance.client;
-
-  final remoteDataSource = ParkingRemoteDataSourceImpl(supabase: supabase);
-
-  final repository = ParkingRepositoryImpl(remoteDataSource: remoteDataSource);
-
-  final watchParkingSlots = WatchParkingSlots(repository);
-
-  runApp(MyApp(watchParkingSlots: watchParkingSlots));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final WatchParkingSlots watchParkingSlots;
-
-  const MyApp({super.key, required this.watchParkingSlots});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          ParkingBloc(watchParkingSlots: watchParkingSlots)
-            ..add(const ParkingWatchStarted()),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        initialRoute: AppRoutes.login,
-        onGenerateRoute: AppRouter.onGenerateRoute,
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+
+      initialRoute: AppRoutes.login,
+      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }

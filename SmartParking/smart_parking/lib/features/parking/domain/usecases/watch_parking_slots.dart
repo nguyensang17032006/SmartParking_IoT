@@ -1,8 +1,9 @@
+
 import '../entities/parking_slot.dart';
-import '../repository/parking_repository.dart';
+import '../repositories/parking_slot_repository.dart';
 
 class WatchParkingSlots {
-  final ParkingRepository repository;
+  final ParkingSlotRepository repository;
 
   WatchParkingSlots(this.repository);
 
@@ -10,3 +11,4 @@ class WatchParkingSlots {
     return repository.watchParkingSlots();
   }
 }
+  
