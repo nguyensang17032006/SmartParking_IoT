@@ -1,3 +1,4 @@
+
 import '../../domain/entities/campus.dart';
 
 class CampusModel extends Campus {
@@ -6,6 +7,8 @@ class CampusModel extends Campus {
     required super.code,
     required super.name,
     required super.address,
+    super.latitude,
+    super.longitude,
   });
 
   factory CampusModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +17,8 @@ class CampusModel extends Campus {
       code: json['code'] as String,
       name: json['name'] as String,
       address: json['address'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 }

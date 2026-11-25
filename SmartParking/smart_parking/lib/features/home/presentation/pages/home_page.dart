@@ -10,6 +10,8 @@ import '../../domain/usecases/get_campuses.dart';
 import '../../data/datasources/campus_remote_data_source.dart';
 import '../../data/repositories/campus_repository_impl.dart';
 import '../widgets/campus_card.dart';
+import '../../../navigation/presentation/pages/navigation_page.dart';
+import '../../../navigation/domain/entities/navigation_destination.dart' as nav;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -209,7 +211,27 @@ class _HomePageState extends State<HomePage> {
                     children: filteredCampuses.map((campus) {
                       return CampusCard(
                         campus: campus,
-                        onTap: () {
+
+                        // DIRECTIONS
+                        onDirections: campus.hasCoordinates
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => NavigationPage(
+                                      destination: nav.NavigationDestination(
+                                        campusId: campus.id,
+                                        name: campus.name,
+                                        latitude: campus.latitude!,
+                                        longitude: campus.longitude!,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                            : null,
+                        // VIEW PARKING
+                        onViewParking: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(

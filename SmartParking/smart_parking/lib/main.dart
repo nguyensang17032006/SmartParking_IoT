@@ -4,8 +4,6 @@ import 'package:smart_parking/core/routes/app_router.dart';
 import 'package:smart_parking/core/routes/app_routes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:smart_parking/main_layout.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
