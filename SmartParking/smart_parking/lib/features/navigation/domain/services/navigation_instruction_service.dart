@@ -5,12 +5,68 @@ import '../entities/navigation_progress.dart';
 import '../entities/navigation_route.dart';
 import '../entities/navigation_step.dart';
 
-class NavigationInstructionService {
-  const NavigationInstructionService();
+import 'navigation_distance_service.dart';
 
-  NavigationManeuver _getManeuver(
-    NavigationStep step,
-  ) {
+class NavigationInstructionService {
+  final NavigationDistanceService distanceService;
+
+  const NavigationInstructionService({
+    this.distanceService = const NavigationDistanceService(),
+  });
+
+  // Tính chiều dài geometry của từng bước.
+  double _getStepGeometryDistance(NavigationStep step) {
+    if (step.geometry.length >= 2) {
+      final distance = distanceService.calculatePathDistance(step.geometry);
+
+      if (distance.isFinite && distance > 0) {
+        return distance;
+      }
+    }
+
+    if (step.distance.isFinite && step.distance > 0) {
+      return step.distance;
+    }
+
+    return 0;
+  }
+
+  // Tính vị trí bắt đầu của từng step
+  // trên toàn bộ tuyến đường.
+  List<double> _buildStepOffsets(List<NavigationStep> steps) {
+    final offsets = <double>[];
+
+    double accumulatedDistance = 0;
+
+    for (final step in steps) {
+      offsets.add(accumulatedDistance);
+
+      accumulatedDistance += _getStepGeometryDistance(step);
+    }
+
+    return offsets;
+  }
+
+  // Xác định step người dùng đang di chuyển.
+  int _findCurrentStepIndex({
+    required List<double> offsets,
+    required double traveledDistance,
+  }) {
+    int currentIndex = 0;
+
+    for (int i = 0; i < offsets.length; i++) {
+      if (offsets[i] <= traveledDistance) {
+        currentIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    return currentIndex;
+  }
+
+  // Chuyển dữ liệu OSRM thành loại thao tác.
+  NavigationManeuver _getManeuver(NavigationStep step) {
     switch (step.maneuverType) {
       case 'arrive':
         return NavigationManeuver.arrive;
@@ -59,10 +115,8 @@ class NavigationInstructionService {
     }
   }
 
-  String _buildInstruction(
-    NavigationManeuver maneuver,
-    NavigationStep step,
-  ) {
+  // Tạo nội dung hướng dẫn tiếng Việt.
+  String _buildInstruction(NavigationManeuver maneuver, NavigationStep step) {
     String instruction;
 
     switch (maneuver) {
@@ -108,7 +162,7 @@ class NavigationInstructionService {
         break;
 
       case NavigationManeuver.merge:
-        instruction = 'Nhập vào làn đường';
+        instruction = 'Nhập vào đường';
         break;
 
       case NavigationManeuver.arrive:
@@ -123,13 +177,43 @@ class NavigationInstructionService {
         break;
     }
 
-    if (step.streetName.trim().isNotEmpty) {
-      return '$instruction vào ${step.streetName}';
+    final streetName = step.streetName.trim();
+
+    if (streetName.isEmpty) {
+      return instruction;
     }
 
-    return instruction;
+    if (maneuver == NavigationManeuver.straight ||
+        maneuver == NavigationManeuver.depart ||
+        maneuver == NavigationManeuver.unknown) {
+      return '$instruction trên $streetName';
+    }
+
+    return '$instruction vào $streetName';
   }
 
+  // Tạo một đối tượng hướng dẫn.
+  NavigationInstruction _createInstruction({
+    required NavigationStep step,
+    required int stepIndex,
+    required double distance,
+    required String currentStreetName,
+    NavigationInstruction? nextInstruction,
+  }) {
+    final maneuver = _getManeuver(step);
+
+    return NavigationInstruction(
+      maneuver: maneuver,
+      instruction: _buildInstruction(maneuver, step),
+      streetName: step.streetName,
+      distanceToManeuver: math.max(0.0, distance),
+      stepIndex: stepIndex,
+      currentStreetName: currentStreetName,
+      nextInstruction: nextInstruction,
+    );
+  }
+
+  // Xác định hướng dẫn hiện tại và tiếp theo.
   NavigationInstruction? getNextInstruction({
     required NavigationRoute route,
     required NavigationProgress progress,
@@ -140,58 +224,54 @@ class NavigationInstructionService {
       return null;
     }
 
-    final geometryDistance =
-        progress.traveledDistance +
-        progress.remainingDistance;
+    final offsets = _buildStepOffsets(steps);
 
-    final totalStepDistance = steps.fold<double>(
-      0,
-      (total, step) => total + step.distance,
+    final traveledDistance = math.max(0.0, progress.traveledDistance);
+
+    // 1. Xác định đường đang di chuyển.
+    final currentStepIndex = _findCurrentStepIndex(
+      offsets: offsets,
+      traveledDistance: traveledDistance,
     );
 
-    final distanceScale = geometryDistance > 0
-        ? totalStepDistance / geometryDistance
-        : 1.0;
+    final currentStep = steps[currentStepIndex];
 
-    final traveledDistance =
-        progress.traveledDistance * distanceScale;
+    // 2. Xác định thao tác sắp tới.
+    final maneuverIndex = math.min(currentStepIndex + 1, steps.length - 1);
 
-    double accumulatedDistance = 0;
+    final maneuverStep = steps[maneuverIndex];
 
-    for (int i = 0; i < steps.length; i++) {
-      final step = steps[i];
+    // 3. Tính khoảng cách đến thao tác sắp tới.
+    final distanceToManeuver = math.max(
+      0.0,
+      offsets[maneuverIndex] - traveledDistance,
+    );
 
-      final maneuverDistance = accumulatedDistance;
+    // 4. Xác định thao tác sau đó.
+    NavigationInstruction? nextInstruction;
 
-      accumulatedDistance += step.distance;
+    final nextIndex = maneuverIndex + 1;
 
-      if (step.maneuverType == 'depart' &&
-          steps.length > 1) {
-        continue;
-      }
+    if (nextIndex < steps.length) {
+      final nextStep = steps[nextIndex];
 
-      if (maneuverDistance < traveledDistance &&
-          i < steps.length - 1) {
-        continue;
-      }
+      final nextDistance = offsets[nextIndex] - offsets[maneuverIndex];
 
-      final maneuver = _getManeuver(step);
-
-      return NavigationInstruction(
-        maneuver: maneuver,
-        instruction: _buildInstruction(
-          maneuver,
-          step,
-        ),
-        streetName: step.streetName,
-        distanceToManeuver: math.max(
-          0.0,
-          maneuverDistance - traveledDistance,
-        ),
-        stepIndex: i,
+      nextInstruction = _createInstruction(
+        step: nextStep,
+        stepIndex: nextIndex,
+        distance: nextDistance,
+        currentStreetName: maneuverStep.streetName,
       );
     }
 
-    return null;
+    // 5. Trả về hướng dẫn.
+    return _createInstruction(
+      step: maneuverStep,
+      stepIndex: maneuverIndex,
+      distance: distanceToManeuver,
+      currentStreetName: currentStep.streetName,
+      nextInstruction: nextInstruction,
+    );
   }
 }

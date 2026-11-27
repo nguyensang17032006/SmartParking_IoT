@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../models/navigation_location_model.dart';
@@ -56,11 +57,41 @@ class LocationDataSourceImpl implements LocationDataSource {
   Stream<NavigationLocationModel> watchLocation() async* {
     await _ensureLocationPermission();
 
+    final LocationSettings settings =
+        defaultTargetPlatform == TargetPlatform.android
+            ? AndroidSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                distanceFilter: 0,
+                intervalDuration: const Duration(seconds: 1),
+              )
+            : const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                distanceFilter: 0,
+              );
+
+    final stopwatch = Stopwatch()..start();
+    int? previousUpdate;
+
     yield* Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
-      ),
-    ).map((position) => NavigationLocationModel.fromPosition(position));
+      locationSettings: settings,
+    ).map((position) {
+      final now = stopwatch.elapsedMilliseconds;
+      final interval = previousUpdate == null
+          ? 'first'
+          : '${now - previousUpdate!} ms';
+      previousUpdate = now;
+
+      if (kDebugMode) {
+        final age = DateTime.now().difference(position.timestamp);
+        debugPrint(
+          'GPS UPDATE: interval=$interval, '
+          'age=${age.inMilliseconds} ms, '
+          'accuracy=${position.accuracy.toStringAsFixed(1)} m, '
+          'speed=${position.speed.toStringAsFixed(1)} m/s',
+        );
+      }
+
+      return NavigationLocationModel.fromPosition(position);
+    });
   }
 }

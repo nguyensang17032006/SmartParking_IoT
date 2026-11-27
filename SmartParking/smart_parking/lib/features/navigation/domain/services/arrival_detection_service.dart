@@ -8,12 +8,15 @@ class ArrivalDetectionService {
 
   final double maximumRemainingDistance;
 
+  final double maximumDistanceFromRoute;
+
   final int requiredConsecutiveCount;
 
   const ArrivalDetectionService({
     this.arrivalRadius = 20,
     this.maximumAccuracy = 15,
     this.maximumRemainingDistance = 30,
+    this.maximumDistanceFromRoute = 15,
     this.requiredConsecutiveCount = 3,
   });
 
@@ -21,6 +24,7 @@ class ArrivalDetectionService {
     required NavigationLocation location,
     required double distanceToDestination,
     required double remainingDistance,
+    required double distanceFromRoute,
     required int previousCount,
   }) {
     final accuracy = location.accuracy;
@@ -36,13 +40,16 @@ class ArrivalDetectionService {
       );
     }
 
-    // 2. Kiểm tra khoảng cách.
+    // 2. Kiểm tra dữ liệu khoảng cách.
     if (!distanceToDestination.isFinite ||
         !remainingDistance.isFinite ||
+        !distanceFromRoute.isFinite ||
         distanceToDestination < 0 ||
         remainingDistance < 0 ||
+        distanceFromRoute < 0 ||
         distanceToDestination > arrivalRadius ||
-        remainingDistance > maximumRemainingDistance) {
+        remainingDistance > maximumRemainingDistance ||
+        distanceFromRoute > maximumDistanceFromRoute) {
       return ArrivalResult(
         status: ArrivalStatus.approaching,
         distanceToDestination: distanceToDestination,
@@ -50,10 +57,9 @@ class ArrivalDetectionService {
       );
     }
 
-    // 3. Tăng số lần xác nhận.
+    // 3. Xác nhận liên tiếp.
     final consecutiveCount = previousCount + 1;
 
-    // 4. Xác định trạng thái đến nơi.
     final status =
         consecutiveCount >= requiredConsecutiveCount
             ? ArrivalStatus.arrived

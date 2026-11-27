@@ -14,9 +14,9 @@ class OffRouteDetectionService {
   final int requiredConsecutiveCount;
 
   const OffRouteDetectionService({
-    this.minimumThreshold = 35,
+    this.minimumThreshold = 25,
     this.maximumAccuracy = 30,
-    this.accuracyMultiplier = 2,
+    this.accuracyMultiplier = 1.5,
     this.requiredConsecutiveCount = 3,
   });
 
@@ -27,12 +27,8 @@ class OffRouteDetectionService {
   }) {
     final accuracy = location.accuracy;
 
-    final distance = progress.distanceFromRoute;
-
-    final threshold = math.max(
-      minimumThreshold,
-      accuracy * accuracyMultiplier,
-    );
+    // Sử dụng khoảng cách ngắn nhất đến tuyến.
+    final distance = progress.nearestRouteDistance;
 
     // 1. Kiểm tra chất lượng GPS.
     if (!accuracy.isFinite ||
@@ -48,7 +44,13 @@ class OffRouteDetectionService {
       );
     }
 
-    // 2. Người dùng vẫn đang đi đúng tuyến.
+    // 2. Tính ngưỡng lệch tuyến động.
+    final threshold = math.max(
+      minimumThreshold,
+      accuracy * accuracyMultiplier,
+    );
+
+    // 3. Người dùng vẫn nằm gần tuyến.
     if (distance <= threshold) {
       return OffRouteResult(
         status: OffRouteStatus.onRoute,
@@ -58,10 +60,9 @@ class OffRouteDetectionService {
       );
     }
 
-    // 3. Người dùng đang lệch khỏi tuyến đường.
+    // 4. Xác nhận lệch tuyến liên tiếp.
     final consecutiveCount = previousCount + 1;
 
-    // 4. Kiểm tra số lần lệch tuyến liên tiếp.
     final status =
         consecutiveCount >= requiredConsecutiveCount
             ? OffRouteStatus.offRoute

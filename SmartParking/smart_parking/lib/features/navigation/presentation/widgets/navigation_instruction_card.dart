@@ -6,13 +6,10 @@ import '../../domain/entities/navigation_instruction.dart';
 class NavigationInstructionCard extends StatelessWidget {
   final NavigationInstruction instruction;
 
-  const NavigationInstructionCard({
-    super.key,
-    required this.instruction,
-  });
+  const NavigationInstructionCard({super.key, required this.instruction});
 
-  IconData _getIcon() {
-    switch (instruction.maneuver) {
+  IconData _getIcon(NavigationManeuver maneuver) {
+    switch (maneuver) {
       case NavigationManeuver.straight:
         return Icons.straight;
 
@@ -60,11 +57,121 @@ class NavigationInstructionCard extends StatelessWidget {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
+  // Hướng dẫn chính.
+  Widget _buildPrimaryInstruction() {
+    return Row(
+      children: [
+        Icon(_getIcon(instruction.maneuver), size: 48, color: Colors.white),
+
+        const SizedBox(width: 16),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatDistance(instruction.distanceToManeuver),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                instruction.instruction,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Hướng dẫn tiếp theo.
+  Widget _buildNextInstruction(NavigationInstruction next) {
+    return Row(
+      children: [
+        Icon(_getIcon(next.maneuver), size: 28, color: Colors.white),
+
+        const SizedBox(width: 12),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Sau đó ${_formatDistance(next.distanceToManeuver)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+
+              const SizedBox(height: 3),
+
+              Text(
+                next.instruction,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Tên đường đang di chuyển.
+  Widget _buildCurrentStreet() {
+    return Row(
+      children: [
+        Icon(
+          Icons.location_on_outlined,
+          size: 15,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
+
+        const SizedBox(width: 6),
+
+        Expanded(
+          child: Text(
+            'Đang đi trên ${instruction.currentStreetName}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final next = instruction.nextInstruction;
+
+    final hasCurrentStreet = instruction.currentStreetName.trim().isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
+
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(16),
@@ -76,42 +183,29 @@ class NavigationInstructionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+
         children: [
-          Icon(
-            _getIcon(),
-            size: 48,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatDistance(
-                    instruction.distanceToManeuver,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  instruction.instruction,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+          _buildPrimaryInstruction(),
+
+          if (next != null) ...[
+            Divider(
+              height: 24,
+              thickness: 1,
+              color: Colors.white.withValues(alpha: 0.15),
             ),
-          ),
+
+            _buildNextInstruction(next),
+          ],
+
+          if (hasCurrentStreet) ...[
+            const SizedBox(height: 12),
+
+            _buildCurrentStreet(),
+          ],
         ],
       ),
     );

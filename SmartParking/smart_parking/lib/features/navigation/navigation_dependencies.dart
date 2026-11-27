@@ -7,7 +7,7 @@ import 'data/repositories/navigation_repository_impl.dart';
 import 'domain/usecases/get_current_location.dart';
 import 'domain/usecases/get_navigation_route.dart';
 import 'domain/usecases/watch_location.dart';
-
+import 'domain/services/map_matching_service.dart';
 import 'presentation/viewmodels/navigation_view_model.dart';
 import 'domain/services/navigation_distance_service.dart';
 import 'domain/services/navigation_progress_service.dart';
@@ -57,8 +57,13 @@ class NavigationDependencies {
   NavigationViewModel createViewModel() {
     const distanceService = NavigationDistanceService();
 
+    const mapMatchingService = MapMatchingService(
+      distanceService: distanceService,
+    );
+
     const progressService = NavigationProgressService(
       distanceService: distanceService,
+      mapMatchingService: mapMatchingService,
     );
 
     const instructionService = NavigationInstructionService();

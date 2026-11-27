@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart' hide NavigationDestination;
-
+import '../../domain/entities/navigation_route.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../widgets/navigation_instruction_card.dart';
@@ -9,6 +9,7 @@ import '../../domain/entities/navigation_destination.dart';
 import '../../navigation_dependencies.dart';
 import '../viewmodels/navigation_view_model.dart';
 import '../widgets/arrival_dialog.dart';
+import '../controllers/marker_animation_controller.dart';
 
 class NavigationPage extends StatefulWidget {
   final NavigationDestination destination;
@@ -19,15 +20,16 @@ class NavigationPage extends StatefulWidget {
   State<NavigationPage> createState() => _NavigationPageState();
 }
 
-class _NavigationPageState extends State<NavigationPage> {
+class _NavigationPageState extends State<NavigationPage>
+    with SingleTickerProviderStateMixin {
   late final NavigationDependencies dependencies;
-
+  late final MarkerAnimationController _markerAnimationController;
   late final NavigationViewModel viewModel;
-
+  NavigationRoute? _animationRoute;
   final MapController _mapController = MapController();
   bool _hasShownArrivalDialog = false;
   bool _isMapReady = false;
-
+  static const double _navigationZoom = 17.0;
   bool _followUser = true;
 
   // 1. INITIALIZE
@@ -39,6 +41,10 @@ class _NavigationPageState extends State<NavigationPage> {
 
     viewModel = dependencies.createViewModel();
 
+    _markerAnimationController = MarkerAnimationController(vsync: this);
+
+    _markerAnimationController.addListener(_onMarkerAnimationChanged);
+
     viewModel.addListener(_onStateChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -48,9 +54,71 @@ class _NavigationPageState extends State<NavigationPage> {
     });
   }
 
+  void _onMarkerAnimationChanged() {
+    if (!mounted) return;
+
+    setState(() {});
+
+    // Camera chỉ bám theo người dùng
+    // khi chế độ follow đang bật.
+    if (!_isMapReady || !_followUser || !viewModel.isNavigating) {
+      return;
+    }
+
+    _moveToCurrentLocation();
+  }
+
+  void _updateMarkerPosition() {
+    final location = viewModel.currentLocation;
+    final route = viewModel.route;
+    final progress = viewModel.progress;
+
+    // Cập nhật geometry khi tuyến đường thay đổi.
+    if (!identical(_animationRoute, route)) {
+      _animationRoute = route;
+
+      _markerAnimationController.setRoute(route?.points ?? []);
+    }
+
+    if (location == null) return;
+
+    final rawPoint = LatLng(location.latitude, location.longitude);
+
+    if (!viewModel.isNavigating) {
+      _markerAnimationController.setPosition(rawPoint);
+
+      return;
+    }
+
+    // Chỉ bám tuyến khi GPS đủ tin cậy.
+    final canSnapToRoute =
+        route != null &&
+        route.points.length >= 2 &&
+        progress != null &&
+        !viewModel.isOffRoute &&
+        !viewModel.isRerouting &&
+        location.accuracy.isFinite &&
+        location.accuracy > 0 &&
+        location.accuracy <= 30 &&
+        progress.distanceFromRoute <= 25;
+
+    if (canSnapToRoute) {
+      _markerAnimationController.animateAlongRoute(progress.traveledDistance);
+    } else {
+      // Không ép marker nằm trên đường khi đi sai.
+      _markerAnimationController.animateTo(rawPoint);
+    }
+  }
+
   // 2. LISTEN TO VIEWMODEL
   void _onStateChanged() {
     if (!mounted) return;
+
+    if (viewModel.hasError || viewModel.route == null) {
+      _isMapReady = false;
+    }
+
+    _updateMarkerPosition();
 
     setState(() {});
 
@@ -63,13 +131,6 @@ class _NavigationPageState extends State<NavigationPage> {
           _showArrivalDialog();
         });
       }
-
-      return;
-    }
-
-    // Tiếp tục theo dõi vị trí người dùng.
-    if (_isMapReady && _followUser && viewModel.isNavigating) {
-      _moveToCurrentLocation();
     }
   }
 
@@ -79,7 +140,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     if (location == null) return null;
 
-    return LatLng(location.latitude, location.longitude);
+    return _markerAnimationController.position ??
+        LatLng(location.latitude, location.longitude);
   }
 
   // 4. DESTINATION
@@ -93,6 +155,16 @@ class _NavigationPageState extends State<NavigationPage> {
 
     if (route == null) return [];
 
+    if (viewModel.isArrived) {
+      return [];
+    }
+
+    if (viewModel.isNavigating) {
+      return _markerAnimationController.remainingRoutePoints;
+    }
+
+    // Khi chưa bắt đầu chỉ đường,
+    // hiển thị toàn bộ tuyến.
     return route.points.map((point) {
       return LatLng(point.latitude, point.longitude);
     }).toList();
@@ -100,11 +172,19 @@ class _NavigationPageState extends State<NavigationPage> {
 
   // 6. FIT ENTIRE ROUTE
   void _fitRoute() {
-    if (!_isMapReady) return;
+    if (!mounted ||
+        !_isMapReady ||
+        viewModel.hasError ||
+        viewModel.route == null) {
+      return;
+    }
 
     final points = [..._routePoints, ?_currentPoint, _destinationPoint];
 
     if (points.length < 2) return;
+
+    // Tắt bám theo marker để xem tổng quan.
+    _followUser = false;
 
     _mapController.fitCamera(
       CameraFit.coordinates(
@@ -116,20 +196,32 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   // 7. FOLLOW CURRENT LOCATION
-  void _moveToCurrentLocation() {
+  void _moveToCurrentLocation({bool resetZoom = false}) {
     final point = _currentPoint;
 
-    if (!_isMapReady || point == null) return;
+    if (!mounted ||
+        !_isMapReady ||
+        point == null ||
+        viewModel.hasError ||
+        viewModel.route == null) {
+      return;
+    }
 
-    _mapController.move(point, 17);
+    final zoom = resetZoom ? _navigationZoom : _mapController.camera.zoom;
+
+    _mapController.move(point, zoom);
   }
 
   // 8. START OR STOP GUIDANCE
   Future<void> _toggleGuidance() async {
     if (viewModel.isNavigating) {
+      _followUser = false;
+
       await viewModel.stopGuidance();
 
       if (!mounted) return;
+
+      _markerAnimationController.stop();
 
       _fitRoute();
     } else {
@@ -140,7 +232,7 @@ class _NavigationPageState extends State<NavigationPage> {
       if (!mounted) return;
 
       if (viewModel.isNavigating) {
-        _moveToCurrentLocation();
+        _moveToCurrentLocation(resetZoom: true);
       }
     }
   }
@@ -199,6 +291,10 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void dispose() {
     viewModel.removeListener(_onStateChanged);
+
+    _markerAnimationController.removeListener(_onMarkerAnimationChanged);
+
+    _markerAnimationController.dispose();
 
     viewModel.dispose();
 
@@ -427,7 +523,7 @@ class _NavigationPageState extends State<NavigationPage> {
             onPressed: () {
               _followUser = true;
 
-              _moveToCurrentLocation();
+              _moveToCurrentLocation(resetZoom: true);
             },
 
             child: const Icon(Icons.my_location),

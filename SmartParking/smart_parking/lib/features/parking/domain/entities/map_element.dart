@@ -10,6 +10,8 @@ class MapElement {
   final int width;
   final int height;
   final int rotation;
+  final String direction;
+  final String? accessSide;
 
   const MapElement({
     required this.id,
@@ -21,5 +23,7 @@ class MapElement {
     required this.width,
     required this.height,
     required this.rotation,
+    this.direction = 'two_way',
+    this.accessSide,
   });
 }

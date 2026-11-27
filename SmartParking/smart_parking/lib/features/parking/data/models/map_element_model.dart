@@ -12,6 +12,8 @@ class MapElementModel extends MapElement {
     required super.width,
     required super.height,
     required super.rotation,
+    super.direction,
+    super.accessSide,
   });
 
   factory MapElementModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,8 @@ class MapElementModel extends MapElement {
       width: (json['grid_width'] as num).toInt(),
       height: (json['grid_height'] as num).toInt(),
       rotation: (json['rotation'] as num?)?.toInt() ?? 0,
+      direction: json['direction'] as String? ?? 'two_way',
+      accessSide: json['access_side'] as String?,
     );
   }
 }

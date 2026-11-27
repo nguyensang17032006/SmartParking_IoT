@@ -9,11 +9,13 @@ class ParkingMapPainter extends CustomPainter {
   final List<MapElement> elements;
   final Map<String, ParkingSlot> slotsById;
   final double cellSize;
+  final String? selectedSlotId;
 
   ParkingMapPainter({
     required this.elements,
     required this.slotsById,
     this.cellSize = 32,
+    this.selectedSlotId,
   });
 
   @override
@@ -92,6 +94,7 @@ class ParkingMapPainter extends CustomPainter {
 
   Color _getElementColor(MapElement element) {
     if (element.type == 'slot') {
+      if (selectedSlotId != null && element.slotId == selectedSlotId) return const Color(0xFF2563EB);
       final slotId = element.slotId;
 
       if (slotId == null) {
@@ -115,6 +118,8 @@ class ParkingMapPainter extends CustomPainter {
         case 'occupied':
           return const Color(0xFFDC2626);
 
+        case 'reserved':
+          return const Color(0xFFF59E0B);
         case 'maintenance':
           return const Color(0xFFFACC15);
 
@@ -151,6 +156,6 @@ class ParkingMapPainter extends CustomPainter {
   bool shouldRepaint(covariant ParkingMapPainter oldDelegate) {
     return oldDelegate.elements != elements ||
         oldDelegate.slotsById != slotsById ||
-        oldDelegate.cellSize != cellSize;
+        oldDelegate.cellSize != cellSize || oldDelegate.selectedSlotId != selectedSlotId;
   }
 }

@@ -164,6 +164,8 @@ class _HomePageState extends State<HomePage> {
                   }
 
                   if (snapshot.hasError) {
+                    debugPrint('CAMPUS ERROR: ${snapshot.error}');
+                    debugPrint('CAMPUS STACK: ${snapshot.stackTrace}');
                     return Center(
                       child: Column(
                         children: [
@@ -235,8 +237,10 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  CampusMapPage(campusId: campus.id),
+                              builder: (_) => CampusMapPage(
+                                campusId: campus.id,
+                                campusName: campus.name,
+                              ),
                             ),
                           );
                         },
