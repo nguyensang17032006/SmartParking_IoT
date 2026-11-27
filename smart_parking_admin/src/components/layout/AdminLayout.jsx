@@ -1,19 +1,24 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Navbar from "./Navbar.jsx";
+import GateEventRealtime from "../../contexts/GateEventRealtime.jsx";
 
 export default function AdminLayout() {
     return (
-        <div className="admin-layout">
-            <Sidebar />
+        <>
+            <GateEventRealtime />
+            <div className="admin-layout">
+                <Sidebar />
 
-            <div className="admin-main">
-                <Navbar />
+                <div className="admin-main">
+                    <Navbar />
 
-                <main className="admin-content">
-                    <Outlet />
-                </main>
+                    <main className="admin-content">
+                        <Outlet />
+                    </main>
+                </div>
             </div>
-        </div>
+        </>
+
     );
 }

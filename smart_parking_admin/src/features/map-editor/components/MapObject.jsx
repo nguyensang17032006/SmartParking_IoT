@@ -144,15 +144,17 @@ export default function MapObject({
             strokeWidth={selected ? 2 : 1}
           />
 
-          {object.type === "slot" && (
+          {["slot", "gate_in", "gate_out", "gate", "ramp"].includes(object.type) && (
             <Line
               points={getAccessSidePoints(
-                object.access_side || "south",
+                object.access_side ||
+                OBJECT_TYPES[object.type]?.accessSide ||
+                "south",
                 width,
                 height
               )}
-              stroke="#facc15"
-              strokeWidth={4}
+              stroke={object.type === "slot" ? "#facc15" : "#22d3ee"}
+              strokeWidth={5}
               lineCap="round"
             />
           )}
@@ -167,8 +169,8 @@ export default function MapObject({
                 object.type === "gate_out"
                   ? "▼ RA"
                   : object.type === "ramp"
-                  ? "▲▼ DỐC"
-                  : "▲ VÀO"
+                    ? "▲▼ DỐC"
+                    : "▲ VÀO"
               }
               fontSize={10}
               fontStyle="bold"

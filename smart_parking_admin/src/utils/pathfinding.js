@@ -28,40 +28,55 @@ function manhattan(p1, p2) {
  */
 export function getGateRoadPort(gate, roadCells = []) {
   const roadSet = new Set(roadCells.map((c) => `${c.x},${c.y}`));
-  const candidates = [];
-
   const gx = gate.x;
   const gy = gate.y;
   const gw = gate.width || 2;
   const gh = gate.height || 3;
+  const effectiveSide = getEffectiveAccessSide(
+    gate.access_side || "south",
+    gate.rotation || 0
+  );
 
-  // Kiểm tra 4 mép bao quanh cổng xem mép nào tiếp giáp với đường đi
-  // Mép trên (North)
-  for (let x = gx; x < gx + gw; x++) {
-    if (roadSet.has(`${x},${gy - 1}`)) candidates.push({ x, y: gy - 1 });
-  }
-  // Mép dưới (South)
-  for (let x = gx; x < gx + gw; x++) {
-    if (roadSet.has(`${x},${gy + gh}`)) candidates.push({ x, y: gy + gh });
-  }
-  // Mép trái (West)
-  for (let y = gy; y < gy + gh; y++) {
-    if (roadSet.has(`${gx - 1},${y}`)) candidates.push({ x: gx - 1, y });
-  }
-  // Mép phải (East)
-  for (let y = gy; y < gy + gh; y++) {
-    if (roadSet.has(`${gx + gw},${y}`)) candidates.push({ x: gx + gw, y });
-  }
-
-  if (candidates.length > 0) {
-    return candidates[0];
+  function getCandidates(side) {
+    const candidates = [];
+    if (side === "north" || side === "south") {
+      const y = side === "north" ? gy - 1 : gy + gh;
+      for (let x = gx; x < gx + gw; x++) {
+        if (roadSet.has(`${x},${y}`)) candidates.push({ x, y });
+      }
+    } else {
+      const x = side === "west" ? gx - 1 : gx + gw;
+      for (let y = gy; y < gy + gh; y++) {
+        if (roadSet.has(`${x},${y}`)) candidates.push({ x, y });
+      }
+    }
+    return candidates;
   }
 
-  // Fallback nếu không có ô đường sát mép
-  return {
-    x: gx + Math.floor(gw / 2),
-    y: gy - 1,
-  };
+  const preferredCandidates = getCandidates(effectiveSide);
+  if (preferredCandidates.length > 0) {
+    return preferredCandidates[Math.floor(preferredCandidates.length / 2)];
+  }
+
+  const sides = ["north", "east", "south", "west"];
+  for (const side of sides) {
+    if (side === effectiveSide) continue;
+    const candidates = getCandidates(side);
+    if (candidates.length > 0) {
+      return candidates[Math.floor(candidates.length / 2)];
+    }
+  }
+
+  if (effectiveSide === "north") {
+    return { x: gx + Math.floor(gw / 2), y: gy - 1 };
+  }
+  if (effectiveSide === "south") {
+    return { x: gx + Math.floor(gw / 2), y: gy + gh };
+  }
+  if (effectiveSide === "west") {
+    return { x: gx - 1, y: gy + Math.floor(gh / 2) };
+  }
+  return { x: gx + gw, y: gy + Math.floor(gh / 2) };
 }
 
 /**
@@ -70,45 +85,75 @@ export function getGateRoadPort(gate, roadCells = []) {
  */
 export function getRampRoadPort(ramp, roadCells = []) {
   const roadSet = new Set(roadCells.map((c) => `${c.x},${c.y}`));
-  const candidates = [];
-
   const rx = ramp.x;
   const ry = ramp.y;
   const rw = ramp.width || 3;
   const rh = ramp.height || 2;
+  const effectiveSide = getEffectiveAccessSide(
+    ramp.access_side || "west",
+    ramp.rotation || 0
+  );
 
-  // Mép trái (West)
-  for (let y = ry; y < ry + rh; y++) {
-    if (roadSet.has(`${rx - 1},${y}`)) {
-      candidates.push({ x: rx - 1, y, insideX: rx, insideY: y });
+  function getCandidates(side) {
+    const candidates = [];
+    if (side === "north" || side === "south") {
+      const roadY = side === "north" ? ry - 1 : ry + rh;
+      const insideY = side === "north" ? ry : ry + rh - 1;
+      for (let x = rx; x < rx + rw; x++) {
+        if (roadSet.has(`${x},${roadY}`)) {
+          candidates.push({ x, y: roadY, insideX: x, insideY });
+        }
+      }
+    } else {
+      const roadX = side === "west" ? rx - 1 : rx + rw;
+      const insideX = side === "west" ? rx : rx + rw - 1;
+      for (let y = ry; y < ry + rh; y++) {
+        if (roadSet.has(`${roadX},${y}`)) {
+          candidates.push({ x: roadX, y, insideX, insideY: y });
+        }
+      }
     }
-  }
-  // Mép phải (East)
-  for (let y = ry; y < ry + rh; y++) {
-    if (roadSet.has(`${rx + rw},${y}`)) {
-      candidates.push({ x: rx + rw, y, insideX: rx + rw - 1, insideY: y });
-    }
-  }
-  // Mép trên (North)
-  for (let x = rx; x < rx + rw; x++) {
-    if (roadSet.has(`${x},${ry - 1}`)) {
-      candidates.push({ x, y: ry - 1, insideX: x, insideY: ry });
-    }
-  }
-  // Mép dưới (South)
-  for (let x = rx; x < rx + rw; x++) {
-    if (roadSet.has(`${x},${ry + rh}`)) {
-      candidates.push({ x, y: ry + rh, insideX: x, insideY: ry + rh - 1 });
-    }
-  }
-
-  if (candidates.length > 0) {
-    // Chọn điểm ở giữa mép tiếp giáp
-    const midIndex = Math.floor(candidates.length / 2);
-    return candidates[midIndex];
+    return candidates;
   }
 
-  // Fallback mép trái
+  const preferredCandidates = getCandidates(effectiveSide);
+  if (preferredCandidates.length > 0) {
+    return preferredCandidates[Math.floor(preferredCandidates.length / 2)];
+  }
+
+  const sides = ["north", "east", "south", "west"];
+  for (const side of sides) {
+    if (side === effectiveSide) continue;
+    const candidates = getCandidates(side);
+    if (candidates.length > 0) {
+      return candidates[Math.floor(candidates.length / 2)];
+    }
+  }
+
+  if (effectiveSide === "north") {
+    return {
+      x: rx + Math.floor(rw / 2),
+      y: ry - 1,
+      insideX: rx + Math.floor(rw / 2),
+      insideY: ry,
+    };
+  }
+  if (effectiveSide === "south") {
+    return {
+      x: rx + Math.floor(rw / 2),
+      y: ry + rh,
+      insideX: rx + Math.floor(rw / 2),
+      insideY: ry + rh - 1,
+    };
+  }
+  if (effectiveSide === "east") {
+    return {
+      x: rx + rw,
+      y: ry + Math.floor(rh / 2),
+      insideX: rx + rw - 1,
+      insideY: ry + Math.floor(rh / 2),
+    };
+  }
   return {
     x: rx - 1,
     y: ry + Math.floor(rh / 2),

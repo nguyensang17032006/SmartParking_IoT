@@ -50,6 +50,13 @@ function loadDraft(storageKey) {
       const parsedObjects = (
         Array.isArray(parsed.objects) ? parsed.objects : []
       ).map((obj) => {
+        const defaultAccessSide = OBJECT_TYPES[obj.type]?.accessSide;
+        const accessSide = ["north", "south", "east", "west"].includes(
+          obj.access_side
+        )
+          ? obj.access_side
+          : defaultAccessSide;
+
         if (obj.type === "slot") {
           const zone =
             parsedZones.find((z) => z.id === obj.zone_id) || parsedZones[0];
@@ -58,9 +65,10 @@ function loadDraft(storageKey) {
             zone_id: zone?.id || obj.zone_id,
             zone_code: zone?.code || obj.zone_code || "A",
             status: obj.status || "available",
+            access_side: accessSide,
           };
         }
-        return obj;
+        return defaultAccessSide ? { ...obj, access_side: accessSide } : obj;
       });
 
       return {
@@ -280,7 +288,7 @@ export default function useMapEditor(floorId = "T1") {
       status: type === "slot" ? "available" : undefined,
       vehicle_type: type === "slot" ? "motorbike" : undefined,
       direction: "two_way",
-      access_side: type === "slot" ? "south" : undefined,
+      access_side: config.accessSide,
       x: 0,
       y: 0,
       width: config.width,

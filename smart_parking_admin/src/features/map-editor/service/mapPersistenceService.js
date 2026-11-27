@@ -1,4 +1,7 @@
 import { supabase } from "../../../lib/supabaseClient";
+import { OBJECT_TYPES } from "../constants/mapConfig";
+
+const ACCESS_SIDES = ["north", "south", "east", "west"];
 
 /**
  * 1. Lấy phiên bản bản đồ mới nhất (published hoặc draft) của bãi xe
@@ -150,7 +153,9 @@ export async function loadMapFromDatabase(lotId) {
           height: el.grid_height,
           rotation: el.rotation || 0,
           direction: el.direction || "two_way",
-          access_side: el.access_side || null,
+          access_side: ACCESS_SIDES.includes(el.access_side)
+            ? el.access_side
+            : OBJECT_TYPES[el.element_type]?.accessSide || null,
           slot_id: el.slot_id,
           zone_id: el.zone_id || zone?.id,
           zone_code: zone?.code || "A",
@@ -512,11 +517,9 @@ export async function saveMapToDatabase(
         direction: ["two_way", "one_way", "none"].includes(obj.direction)
           ? obj.direction
           : "two_way",
-        access_side: ["north", "south", "east", "west"].includes(
-          obj.access_side
-        )
+        access_side: ACCESS_SIDES.includes(obj.access_side)
           ? obj.access_side
-          : null,
+          : OBJECT_TYPES[obj.type]?.accessSide || null,
       });
 
       // Cập nhật lại ID cho đối tượng trong bộ nhớ

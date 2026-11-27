@@ -325,183 +325,7 @@ export default function Home() {
     );
   }
 
-  // ==========================================
-  // MÔ PHỎNG: XE VÀO CỔNG (Entry Simulation)
-  // ==========================================
-  async function handleSimulateEntry() {
-    // 1. Tìm tất cả ô đang TRỐNG trong toàn bãi
-    const availableSlots = [];
-    for (const f of floors) {
-      const fObjs = floorsData[f.id]?.objects || [];
-      for (const obj of fObjs) {
-        if (obj.type === "slot" && (obj.status || "available") === "available") {
-          availableSlots.push({ slot: obj, floorId: f.id });
-        }
-      }
-    }
 
-    if (availableSlots.length === 0) {
-      toast.error("Bãi xe đã hết chỗ đỗ trống!");
-      return;
-    }
-
-    // 2. Chọn ngẫu nhiên 1 ô trống
-    const chosen =
-      availableSlots[Math.floor(Math.random() * availableSlots.length)];
-
-    // 3. Chạy thuật toán A* chỉ đường đến ô đó
-    runPathfindingToSlot(chosen.slot, chosen.floorId);
-
-    // 4. Cập nhật trạng thái ô sang 'occupied' (Có xe - Màu đỏ)
-    try {
-      const { error } = await supabase
-        .from("parking_slots")
-        .update({
-          status: "occupied",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", chosen.slot.slot_id);
-
-      if (error) throw error;
-
-      // Cập nhật state nội bộ ngay lập tức
-      setFloorsData((prev) => {
-        const next = { ...prev };
-        next[chosen.floorId] = {
-          ...next[chosen.floorId],
-          objects: next[chosen.floorId].objects.map((o) =>
-            o.id === chosen.slot.id ? { ...o, status: "occupied" } : o
-          ),
-        };
-        return next;
-      });
-
-      const floorName =
-        floors.find((f) => f.id === chosen.floorId)?.name || "Tầng 1";
-      toast.success(
-        `[MÔ PHỎNG] Xe đã vào bãi! Được điều hướng đến ô ${chosen.slot.label} tại ${floorName}.`
-      );
-    } catch (err) {
-      console.error("Lỗi cập nhật trạng thái ô:", err);
-    }
-  }
-
-  // ==========================================
-  // MÔ PHỎNG: XE RA CỔNG (Exit Simulation)
-  // ==========================================
-  async function handleSimulateExit() {
-    // 1. Tìm các ô ĐANG CÓ XE
-    const occupiedSlots = [];
-    for (const f of floors) {
-      const fObjs = floorsData[f.id]?.objects || [];
-      for (const obj of fObjs) {
-        if (obj.type === "slot" && obj.status === "occupied") {
-          occupiedSlots.push({ slot: obj, floorId: f.id });
-        }
-      }
-    }
-
-    if (occupiedSlots.length === 0) {
-      toast.error("Hiện không có xe nào đang đỗ trong bãi!");
-      return;
-    }
-
-    // 2. Chọn ngẫu nhiên 1 ô có xe
-    const chosen =
-      occupiedSlots[Math.floor(Math.random() * occupiedSlots.length)];
-
-    // 3. Tìm Cổng ra (gate_out)
-    let exitNode = null;
-    let gateOutObj = null;
-    for (const f of floors) {
-      const fObjs = floorsData[f.id]?.objects || [];
-      const gate = fObjs.find((o) => o.type === "gate_out");
-      if (gate) {
-        gateOutObj = gate;
-        const port = getGateRoadPort(gate, floorsData[f.id]?.roadCells || []);
-        exitNode = {
-          x: port.x,
-          y: port.y,
-          floorId: f.id,
-        };
-        break;
-      }
-    }
-
-    if (exitNode && gateOutObj) {
-      const entryPoint = getSlotEntryPoint(
-        chosen.slot,
-        floorsData[chosen.floorId]?.roadCells || []
-      );
-      const rawPath = findPathAStar({
-        startNode: {
-          x: entryPoint.x,
-          y: entryPoint.y,
-          floorId: chosen.floorId,
-        },
-        goalNode: exitNode,
-        floorsData,
-        rampConnections,
-      });
-
-      if (rawPath && rawPath.length > 0) {
-        const fullPath = [
-          {
-            x: chosen.slot.x + Math.floor((chosen.slot.width || 2) / 2),
-            y: chosen.slot.y + Math.floor((chosen.slot.height || 2) / 2),
-            floorId: chosen.floorId,
-          },
-          ...rawPath,
-          {
-            x: gateOutObj.x + Math.floor((gateOutObj.width || 2) / 2),
-            y: gateOutObj.y + Math.floor((gateOutObj.height || 3) / 2),
-            floorId: exitNode.floorId,
-          },
-        ];
-
-        setActivePath(fullPath);
-        setRouteSummary({
-          slotCode: chosen.slot.label,
-          targetFloorId: exitNode.floorId,
-          targetFloorName: "Cổng ra",
-          isMultiFloor: chosen.floorId !== exitNode.floorId,
-          stepCount: fullPath.length,
-          startFloorName:
-            floors.find((f) => f.id === chosen.floorId)?.name || "",
-        });
-      }
-    }
-
-    // 4. Đổi trạng thái ô về 'available' (Trống - Màu xanh)
-    try {
-      const { error } = await supabase
-        .from("parking_slots")
-        .update({
-          status: "available",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", chosen.slot.slot_id);
-
-      if (error) throw error;
-
-      setFloorsData((prev) => {
-        const next = { ...prev };
-        next[chosen.floorId] = {
-          ...next[chosen.floorId],
-          objects: next[chosen.floorId].objects.map((o) =>
-            o.id === chosen.slot.id ? { ...o, status: "available" } : o
-          ),
-        };
-        return next;
-      });
-
-      toast.success(
-        `[MÔ PHỎNG] Xe tại ô ${chosen.slot.label} đã rời bãi! Ô đã chuyển về trạng thái Trống.`
-      );
-    } catch (err) {
-      console.error("Lỗi cập nhật trạng thái ô:", err);
-    }
-  }
 
   // ==========================================
   // ĐỔI TRẠNG THÁI Ô KHI ADMIN CLICK TRỰC TIẾP
@@ -727,26 +551,6 @@ export default function Home() {
 
             {/* Các nút hành động mô phỏng */}
             <div className="controls-group">
-              <button
-                type="button"
-                onClick={handleSimulateEntry}
-                className="btn-sim btn-sim-entry"
-                title="Chọn ngẫu nhiên 1 ô trống, chạy thuật toán A* dẫn đường và đổi trạng thái có xe"
-              >
-                <Car size={16} />
-                🚗 Mô phỏng xe vào cổng
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSimulateExit}
-                className="btn-sim btn-sim-exit"
-                title="Chọn 1 ô có xe, chạy thuật toán A* ra cổng và trả lại ô trống"
-              >
-                <ArrowRight size={16} />
-                🚙 Mô phỏng xe ra cổng
-              </button>
-
               {activePath.length > 0 && (
                 <button
                   type="button"
@@ -763,43 +567,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 5. Banner thông báo lộ trình A* */}
-          {routeSummary && (
-            <div className="route-banner">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Navigation size={18} color="#2563eb" />
-                <span>
-                  Đang hiển thị tuyến đường dẫn đến ô{" "}
-                  <strong>{routeSummary.slotCode}</strong> ({routeSummary.targetFloorName}) — Độ dài:{" "}
-                  <strong>{routeSummary.stepCount} bước</strong>.
-                  {routeSummary.isMultiFloor && (
-                    <span style={{ marginLeft: "6px", color: "#d97706" }}>
-                      (Lộ trình liên tầng: {routeSummary.startFloorName} ➔ Dốc ➔ {routeSummary.targetFloorName})
-                    </span>
-                  )}
-                </span>
-              </div>
 
-              {routeSummary.isMultiFloor && (
-                <button
-                  type="button"
-                  onClick={() => setCurrentFloorId(routeSummary.targetFloorId)}
-                  style={{
-                    background: "#2563eb",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                  }}
-                >
-                  Chuyển sang {routeSummary.targetFloorName}
-                </button>
-              )}
-            </div>
-          )}
 
           {/* 6. Chi tiết ô đỗ khi Click */}
           {selectedSlot && (
@@ -830,15 +598,15 @@ export default function Home() {
                           selectedSlot.status === "occupied"
                             ? "#ef4444"
                             : selectedSlot.status === "maintenance"
-                            ? "#f59e0b"
-                            : "#10b981",
+                              ? "#f59e0b"
+                              : "#10b981",
                       }}
                     >
                       {selectedSlot.status === "occupied"
                         ? "Có xe (Occupied)"
                         : selectedSlot.status === "maintenance"
-                        ? "Bảo trì"
-                        : "Trống (Available)"}
+                          ? "Bảo trì"
+                          : "Trống (Available)"}
                     </strong>
                   </div>
                 </div>

@@ -1,3 +1,5 @@
+import { OBJECT_TYPES } from "../constants/mapConfig";
+
 export default function PropertiesPanel({
   selectedObject,
   onChange,
@@ -110,11 +112,13 @@ export default function PropertiesPanel({
       )}
 
       {/* Hướng lối vào (Access Side) */}
-      {obj.type === "slot" && (
+      {["slot", "gate_in", "gate_out", "gate", "ramp"].includes(obj.type) && (
         <label>
-          Hướng xe ra/vào ô đỗ
+          {obj.type === "slot"
+            ? "Hướng xe ra/vào ô đỗ"
+            : "Hướng tiếp cận / cửa vào ra"}
           <select
-            value={obj.access_side || "south"}
+            value={obj.access_side || OBJECT_TYPES[obj.type]?.accessSide || "south"}
             onChange={(e) =>
               onChange(obj.id, { access_side: e.target.value })
             }
