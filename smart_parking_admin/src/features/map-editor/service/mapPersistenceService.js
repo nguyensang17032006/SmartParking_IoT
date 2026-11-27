@@ -71,13 +71,13 @@ export async function loadMapFromDatabase(lotId) {
           floorZones.length > 0
             ? floorZones
             : [
-                {
-                  id: crypto.randomUUID(),
-                  code: "A",
-                  name: "Khu A",
-                  color: "#10b981",
-                },
-              ],
+              {
+                id: crypto.randomUUID(),
+                code: "A",
+                name: "Khu A",
+                color: "#10b981",
+              },
+            ],
       };
     }
 
@@ -121,13 +121,13 @@ export async function loadMapFromDatabase(lotId) {
       floorZones.length > 0
         ? floorZones
         : [
-            {
-              id: crypto.randomUUID(),
-              code: "A",
-              name: "Khu A",
-              color: "#10b981",
-            },
-          ];
+          {
+            id: crypto.randomUUID(),
+            code: "A",
+            name: "Khu A",
+            color: "#10b981",
+          },
+        ];
 
     const floorElements = (elements || []).filter(
       (e) => e.floor_id === floor.id
@@ -159,7 +159,7 @@ export async function loadMapFromDatabase(lotId) {
           slot_id: el.slot_id,
           zone_id: el.zone_id || zone?.id,
           zone_code: zone?.code || "A",
-          vehicle_type: el.parking_slots?.vehicle_type || "motorbike",
+          vehicle_type: el.parking_slots?.vehicle_type || "car",
           status: el.parking_slots?.status || "available",
         });
       }
@@ -346,7 +346,7 @@ export async function saveMapToDatabase(
           code: obj.label || "A01",
           vehicle_type: ["motorbike", "car", "other"].includes(obj.vehicle_type)
             ? obj.vehicle_type
-            : "motorbike",
+            : "car",
           status: ["available", "occupied", "maintenance"].includes(obj.status)
             ? obj.status
             : "available",

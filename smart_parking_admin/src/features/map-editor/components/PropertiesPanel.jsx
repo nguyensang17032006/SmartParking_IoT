@@ -84,12 +84,14 @@ export default function PropertiesPanel({
         <label>
           Loại phương tiện
           <select
-            value={obj.vehicle_type || "motorbike"}
+            value={obj.vehicle_type || "car"}
             onChange={(e) =>
               onChange(obj.id, { vehicle_type: e.target.value })
             }
           >
             <option value="car">Ô tô (car)</option>
+            <option value="motorbike">Xe máy (motorbike)</option>
+            <option value="other">Khác (other)</option>
           </select>
         </label>
       )}

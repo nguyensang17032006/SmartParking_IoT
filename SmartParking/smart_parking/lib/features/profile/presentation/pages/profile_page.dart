@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 
 import 'package:smart_parking/core/theme/app_spacing.dart';
 import 'package:smart_parking/core/theme/app_text_styles.dart';
+import 'package:smart_parking/features/profile/presentation/pages/face_register_page.dart';
 
 import '../../widgets/profile_menu_item.dart';
 import 'edit_profile_page.dart';
@@ -47,29 +47,21 @@ class ProfilePage extends StatelessWidget {
             const CircleAvatar(
               radius: 43,
               backgroundColor: Color(0xFFE5EAF3),
-              child: Icon(
-                Icons.person_outline,
-                size: 52,
-                color: secondary,
-              ),
+              child: Icon(Icons.person_outline, size: 52, color: secondary),
             ),
 
             AppSpacing.gapSM,
 
             Text(
               'Trần Quốc Khánh',
-              style: AppTextStyles.headingSmall.copyWith(
-                color: navy,
-              ),
+              style: AppTextStyles.headingSmall.copyWith(color: navy),
             ),
 
             AppSpacing.gapXXS,
 
             Text(
               '+84 912 345 678',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: secondary,
-              ),
+              style: AppTextStyles.bodySmall.copyWith(color: secondary),
             ),
 
             AppSpacing.gapXXL,
@@ -103,12 +95,23 @@ class ProfilePage extends StatelessWidget {
                   const Divider(height: 1),
 
                   ProfileMenuItem(
+                    icon: Icons.person_outline,
+                    title: 'Đăng kí nhận diện khuôn mặt',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FaceRegisterofilePage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+                  ProfileMenuItem(
                     icon: Icons.directions_car_outlined,
                     title: 'Phương tiện của tôi',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Phương tiện của tôi',
-                    ),
+                    onTap: () => showComingSoon(context, 'Phương tiện của tôi'),
                   ),
 
                   const Divider(height: 1),
@@ -117,10 +120,7 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Ví của tôi',
                     trailingText: '120.000đ',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Ví của tôi',
-                    ),
+                    onTap: () => showComingSoon(context, 'Ví của tôi'),
                   ),
 
                   const Divider(height: 1),
@@ -128,10 +128,7 @@ class ProfilePage extends StatelessWidget {
                   ProfileMenuItem(
                     icon: Icons.local_offer_outlined,
                     title: 'Ưu đãi của tôi',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Ưu đãi',
-                    ),
+                    onTap: () => showComingSoon(context, 'Ưu đãi'),
                   ),
 
                   const Divider(height: 1),
@@ -139,10 +136,7 @@ class ProfilePage extends StatelessWidget {
                   ProfileMenuItem(
                     icon: Icons.help_outline,
                     title: 'Trung tâm hỗ trợ',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Hỗ trợ',
-                    ),
+                    onTap: () => showComingSoon(context, 'Hỗ trợ'),
                   ),
 
                   const Divider(height: 1),
@@ -150,10 +144,7 @@ class ProfilePage extends StatelessWidget {
                   ProfileMenuItem(
                     icon: Icons.settings_outlined,
                     title: 'Cài đặt',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Cài đặt',
-                    ),
+                    onTap: () => showComingSoon(context, 'Cài đặt'),
                   ),
 
                   const Divider(height: 1),
@@ -161,10 +152,7 @@ class ProfilePage extends StatelessWidget {
                   ProfileMenuItem(
                     icon: Icons.logout,
                     title: 'Đăng xuất',
-                    onTap: () => showComingSoon(
-                      context,
-                      'Đăng xuất',
-                    ),
+                    onTap: () => showComingSoon(context, 'Đăng xuất'),
                   ),
                 ],
               ),

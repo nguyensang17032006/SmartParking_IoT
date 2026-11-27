@@ -286,7 +286,7 @@ export default function useMapEditor(floorId = "T1") {
       zone_id: type === "slot" ? zoneId : null,
       zone_code: type === "slot" ? zoneCode : null,
       status: type === "slot" ? "available" : undefined,
-      vehicle_type: type === "slot" ? "motorbike" : undefined,
+      vehicle_type: type === "slot" ? "car" : undefined,
       direction: "two_way",
       access_side: config.accessSide,
       x: 0,
